@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
       lp: apexTierPlayers.currentLp,
       summonerLevel: summoners.summonerLevel,
       profileIconId: summoners.profileIconId,
+      lastUpdatedAt: apexTierPlayers.updatedAt,
     })
     .from(riotIds)
     .innerJoin(summoners, eq(riotIds.puuid, summoners.puuid))
@@ -53,7 +54,8 @@ export async function GET(request: NextRequest) {
         ),
         like(riotIds.lolprosSlug, gameName + "%"),
       ),
-    );
+    )
+    .limit(10);
 
   return Response.json({ players });
 }

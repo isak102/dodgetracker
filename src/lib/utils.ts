@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { Tier } from "../types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -46,4 +47,9 @@ export function decodeRiotIdURIComponent(
     decodedString.substring(0, lastDashIdx),
     decodedString.substring(lastDashIdx + 1),
   ];
+}
+
+export function getRankEmblem(rankTier: Tier) {
+  const rankTierStr = rankTier.toLowerCase();
+  return `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-mini-crests/${rankTierStr}.svg`;
 }

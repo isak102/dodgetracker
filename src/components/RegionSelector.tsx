@@ -2,9 +2,12 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import React, { useTransition } from "react";
+import { cn } from "../lib/utils";
 import { supportedUserRegions } from "../regions";
 
-export default function RegionSelector() {
+interface RegionSelectorProps extends React.HTMLAttributes<HTMLSelectElement> {}
+
+export default function RegionSelector({ className }: RegionSelectorProps) {
   const pathname = usePathname();
   const router = useRouter();
   const userRegion = pathname.split("/")[1];
@@ -25,7 +28,10 @@ export default function RegionSelector() {
   return (
     <>
       <select
-        className="ml-2 rounded-md bg-zinc-900 text-sm md:text-base"
+        className={cn(
+          "ml-2 rounded-md bg-zinc-900 text-sm md:text-base",
+          className,
+        )}
         defaultValue={userRegion}
         onChange={handleChange}
         disabled={isPending}
