@@ -1,8 +1,10 @@
 import { GoogleAnalytics, GoogleTagManager } from "@next/third-parties/google";
+import { QueryClient } from "@tanstack/react-query";
 import { Analytics } from "@vercel/analytics/react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import NavBar from "../components/NavBar";
+import { ReactQueryClientProvider } from "../components/higherOrder/queryClientProvider";
 import { supportedUserRegions } from "../regions";
 import "./globals.css";
 import { CSPostHogProvider } from "./providers";
@@ -25,6 +27,8 @@ export const metadata: Metadata = {
   },
 };
 
+const queryClient = new QueryClient();
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -39,11 +43,13 @@ export default function RootLayout({
         className={`${inter.className} dark !min-w-full bg-zinc-700 text-zinc-300`}
       >
         <CSPostHogProvider>
-          <NavBar />
-          <main>{children}</main>
-          <GoogleAnalytics gaId={process.env.GA_ID || ""} />
-          <GoogleTagManager gtmId={process.env.GTM_ID || ""} />
-          <Analytics />
+          <ReactQueryClientProvider>
+            <NavBar />
+            <main>{children}</main>
+            <GoogleAnalytics gaId={process.env.GA_ID || ""} />
+            <GoogleTagManager gtmId={process.env.GTM_ID || ""} />
+            <Analytics />
+          </ReactQueryClientProvider>
         </CSPostHogProvider>
       </body>
     </html>
