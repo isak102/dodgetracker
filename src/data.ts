@@ -1,7 +1,9 @@
 import {
   apexTierPlayers,
+  demotions,
   dodges,
   playerCounts,
+  promotions,
   riotIds,
   summoners,
 } from "@/src/db/schema";
@@ -288,6 +290,67 @@ export async function getAccounts() {
 export function getRankEmblem(rankTier: Tier) {
   const rankTierStr = rankTier.toLowerCase();
   return `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-mini-crests/${rankTierStr}.svg`;
+}
+
+/**
+ * Get the dodges per game for a player in the current split. Dodges per came can not be calculated for
+ * older as the games played data is not available.
+ *
+ * @param gameName - Game name of the player
+ * @param tagLine - Tag line of the player
+ */
+export async function getDodgesPerGame(gameName: string, tagLine: string) {
+  const time = new Date();
+
+  const [promotionsResult, demotionsResult] = await Promise.all([
+    db
+      .select({
+        createdAt: promotions.createdAt,
+        atGames: sql<number>`(${apexTierPlayers.wins} + ${apexTierPlayers.losses})`,
+      })
+      .from(promotions)
+      .innerJoin(
+        summoners,
+        and(
+          eq(promotions.summonerId, summoners.summonerId),
+          eq(promotions.region, summoners.region),
+        ),
+      )
+      .innerJoin(riotIds, eq(summoners.puuid, riotIds.puuid))
+      .innerJoin(
+        apexTierPlayers,
+        and(
+          eq(summoners.summonerId, apexTierPlayers.summonerId),
+          eq(summoners.region, apexTierPlayers.region),
+        ),
+      )
+      .where(and(eq(riotIds.gameName, gameName), eq(riotIds.tagLine, tagLine))),
+
+    db
+      .select({
+        createdAt: demotions.createdAt,
+        atGames: sql<number>`(${apexTierPlayers.wins} + ${apexTierPlayers.losses})`,
+      })
+      .from(demotions)
+      .innerJoin(
+        summoners,
+        and(
+          eq(demotions.summonerId, summoners.summonerId),
+          eq(demotions.region, summoners.region),
+        ),
+      )
+      .innerJoin(riotIds, eq(summoners.puuid, riotIds.puuid))
+      .innerJoin(
+        apexTierPlayers,
+        and(
+          eq(summoners.summonerId, apexTierPlayers.summonerId),
+          eq(summoners.region, apexTierPlayers.region),
+        ),
+      )
+      .where(and(eq(riotIds.gameName, gameName), eq(riotIds.tagLine, tagLine))),
+  ]);
+
+  console.log(`Query took ${new Date().getTime() - time.getTime()}ms`);
 }
 
 export async function getDodgesCount(

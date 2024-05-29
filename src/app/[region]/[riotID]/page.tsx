@@ -16,6 +16,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import DodgeCounts from "./_components/DodgeCounts";
 import DodgeTypes from "./_components/DodgeTypes";
+import DodgesPerGame from "./_components/DodgesPerGame";
 
 // FIXME: Add metadata
 
@@ -36,7 +37,7 @@ export async function generateMetadata({
 
   return {
     title: `${gameName}#${tagLine} (${params.region.toUpperCase()}) - Dodge History`,
-    description: `Dodge history of ${gameName}#${tagLine} (${params.region.toUpperCase()}) in League of Legends`,
+    description: `Dodge history and statistics of ${gameName}#${tagLine} (${params.region.toUpperCase()}) in League of Legends`,
   };
 }
 
@@ -95,6 +96,7 @@ export default async function Summoner({
               }
             >
               <div className="flex flex-wrap items-center justify-center">
+                <DodgesPerGame gameName={gameName} tagLine={tagLine} />
                 <div className="flex flex-col items-center justify-center">
                   <p className="font-semibold">Short/long Dodge Ratio</p>
                   <div className="flex w-96 items-center justify-center">
