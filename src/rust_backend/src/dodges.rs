@@ -1,19 +1,20 @@
-use crate::{entities::apex_tier_players, entities::dodges};
+use crate::entities::{apex_tier_players, dodges, sea_orm_active_enums::RankTier};
+use anyhow::Result;
 use riven::models::league_v4::LeagueItem;
-use sea_orm::ActiveValue;
+use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait};
 use std::{collections::HashMap, time::Instant};
 
 const DECAY_LP_LOSS: i32 = 75;
 
 pub async fn find_dodges(
     db_players: &HashMap<String, apex_tier_players::Model>,
-    api_players: &HashMap<String, LeagueItem>,
+    api_players: &HashMap<String, (LeagueItem, RankTier)>,
 ) -> Vec<dodges::ActiveModel> {
     let start_time = Instant::now();
 
     let dodges: Vec<dodges::ActiveModel> = api_players
         .values()
-        .filter_map(|new_data| {
+        .filter_map(|(new_data, _)| {
             db_players.get(&new_data.summoner_id).and_then(|old_data| {
                 let old_games_played = old_data.wins + old_data.losses;
                 let new_games_played = new_data.wins + new_data.losses;
@@ -39,8 +40,23 @@ pub async fn find_dodges(
         })
         .collect();
 
-    println!("Dodges time taken: {:?}", start_time.elapsed());
+    println!("Dodges detection time taken: {:?}", start_time.elapsed());
     println!("Found {} dodges", dodges.len());
 
     dodges
+}
+
+pub async fn insert_dodges(
+    dodges: Vec<dodges::ActiveModel>,
+    db: &DatabaseConnection,
+) -> Result<()> {
+    if dodges.is_empty() {
+        return Ok(());
+    }
+
+    let start_time = Instant::now();
+    dodges::Entity::insert_many(dodges.clone()).exec(db).await?;
+    println!("Dodges Insert time taken: {:?}", start_time.elapsed());
+
+    Ok(())
 }
