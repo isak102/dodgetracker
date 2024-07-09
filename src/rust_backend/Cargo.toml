@@ -4,10 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.86"
 dotenv = "0.15.0"
-futures = "0.3.30"
+riven = "2.54.0"
 sea-orm = { version = "^0.12.0", features = [
   "sqlx-mysql",
   "runtime-async-std-native-tls",
   "macros",
 ] }
+tokio = { version = "1.38.0", features = ["full"] }
