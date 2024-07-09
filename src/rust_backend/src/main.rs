@@ -16,12 +16,11 @@ async fn run() -> Result<()> {
     let time = std::time::Instant::now();
     let db = Database::connect(db_url).await?;
     println!("Database connection time taken: {:?}", time.elapsed());
-
-    let region = "euw1";
-
     let riot_api = RiotApi::new(env::var("RIOT_API_KEY").expect("RIOT API KEY not set"));
 
-    let new_players = players::get_players_from_api(PlatformRoute::EUW1, &riot_api)
+    let region = PlatformRoute::EUW1;
+
+    let new_players = players::get_players_from_api(region, &riot_api)
         .await
         .unwrap();
     let old_players = players::get_players_from_db(&db, region).await.unwrap();
