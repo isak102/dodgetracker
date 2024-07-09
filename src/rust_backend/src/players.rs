@@ -1,24 +1,25 @@
-use std::collections::HashMap;
-use std::time::Instant;
-
-use crate::apex_tier_players;
-use riven::models::league_v4::LeagueItem;
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
-
+use crate::entities::apex_tier_players;
 use anyhow::Result;
 use riven::consts::PlatformRoute;
+use riven::models::league_v4::LeagueItem;
 use riven::RiotApi;
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use std::collections::HashMap;
 use tokio::try_join;
 
 pub async fn get_players_from_db(
     db: &DatabaseConnection,
     region: &str,
-) -> Result<Vec<apex_tier_players::Model>> {
-    let all_players = apex_tier_players::Entity::find()
+) -> Result<HashMap<String, apex_tier_players::Model>> {
+    let result: HashMap<String, apex_tier_players::Model> = apex_tier_players::Entity::find()
         .filter(apex_tier_players::Column::Region.eq(region))
         .all(db)
-        .await?;
-    Ok(all_players)
+        .await?
+        .into_iter()
+        .map(|model| (model.summoner_id.clone(), model))
+        .collect();
+
+    Ok(result)
 }
 
 pub async fn get_players_from_api(
@@ -38,8 +39,6 @@ pub async fn get_players_from_api(
     let (master_result, grandmaster_result, challenger_result) =
         try_join!(master, grandmaster, challenger)?;
 
-    let start_time = Instant::now();
-
     let result: HashMap<String, LeagueItem> = master_result
         .entries
         .into_iter()
@@ -47,8 +46,6 @@ pub async fn get_players_from_api(
         .chain(challenger_result.entries)
         .map(|entry| (entry.summoner_id.clone(), entry))
         .collect();
-
-    println!("Time taken: {:?}", start_time.elapsed());
 
     Ok(result)
 }
