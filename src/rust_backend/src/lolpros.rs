@@ -43,14 +43,11 @@ pub async fn upsert_lolpros_slugs(
         .iter()
         .zip(results)
         .filter_map(|(model, result)| match result {
-            Ok(Ok(Some(slug))) => {
-                println!("Found slug {}", slug);
-                Some(riot_ids::ActiveModel {
-                    puuid: model.puuid.clone(),
-                    lolpros_slug: Set(Some(slug)),
-                    ..Default::default()
-                })
-            }
+            Ok(Ok(Some(slug))) => Some(riot_ids::ActiveModel {
+                puuid: model.puuid.clone(),
+                lolpros_slug: Set(Some(slug)),
+                ..Default::default()
+            }),
             _ => None,
         })
         .collect();

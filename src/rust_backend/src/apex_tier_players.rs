@@ -33,7 +33,10 @@ pub async fn get_players_from_db(
 
 pub async fn get_players_from_api(
     region: PlatformRoute,
-) -> Result<HashMap<String, (LeagueItem, RankTier)>> {
+) -> Result<(
+    HashMap<String, (LeagueItem, RankTier)>,
+    (usize, usize, usize),
+)> {
     let time = std::time::Instant::now();
 
     let master = RIOT_API
@@ -57,6 +60,12 @@ pub async fn get_players_from_api(
 
     let new_time = std::time::Instant::now();
 
+    let (master_count, grandmaster_count, challenger_count) = (
+        master_result.entries.len(),
+        grandmaster_result.entries.len(),
+        challenger_result.entries.len(),
+    );
+
     let result: HashMap<String, (LeagueItem, RankTier)> = master_result
         .entries
         .into_iter()
@@ -77,7 +86,7 @@ pub async fn get_players_from_api(
 
     println!("API result processing time taken: {:?}", new_time.elapsed());
 
-    Ok(result)
+    Ok((result, (master_count, grandmaster_count, challenger_count)))
 }
 
 pub async fn upsert_players(

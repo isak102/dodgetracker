@@ -11,6 +11,7 @@ mod db;
 mod dodges;
 mod entities;
 mod lolpros;
+mod player_counts;
 mod promotions_demotions;
 mod riot_api;
 mod riot_ids;
@@ -28,15 +29,17 @@ async fn run_region(region: PlatformRoute) -> Result<()> {
     let db = db::get_db().await;
     let txn = db.begin().await?;
 
-    let new_players = match apex_tier_players::get_players_from_api(region).await {
-        Ok(players) => players,
-        Err(_) => return Ok(()),
-    };
-    let old_players = apex_tier_players::get_players_from_db(&txn, region)
+    let (api_players, (master_count, grandmaster_count, challenger_count)) =
+        match apex_tier_players::get_players_from_api(region).await {
+            Ok(r) => r,
+            Err(_) => return Ok(()),
+        };
+
+    let db_players = apex_tier_players::get_players_from_db(&txn, region)
         .await
         .unwrap();
 
-    let dodges = dodges::find_dodges(&old_players, &new_players).await;
+    let dodges = dodges::find_dodges(&db_players, &api_players).await;
 
     if !dodges.is_empty() {
         let summoner_ids: Vec<&str> = dodges
@@ -58,12 +61,21 @@ async fn run_region(region: PlatformRoute) -> Result<()> {
         dodges::insert_dodges(&dodges, &txn).await?;
     }
 
-    apex_tier_players::upsert_players(&new_players, region, &txn).await?;
+    apex_tier_players::upsert_players(&api_players, region, &txn).await?;
 
-    promotions_demotions::insert_promotions(&new_players, &old_players, region, &txn).await?;
-    promotions_demotions::insert_demotions(&new_players, &old_players, region, &txn).await?;
+    promotions_demotions::insert_promotions(&api_players, &db_players, region, &txn).await?;
+    promotions_demotions::insert_demotions(&api_players, &db_players, region, &txn).await?;
 
-    // txn.commit().await?;
+    player_counts::update_player_counts(
+        master_count,
+        grandmaster_count,
+        challenger_count,
+        region,
+        &txn,
+    )
+    .await?;
+
+    txn.commit().await?;
 
     Ok(())
 }
