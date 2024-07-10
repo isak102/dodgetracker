@@ -1,9 +1,9 @@
 use crate::entities::apex_tier_players;
 use crate::entities::sea_orm_active_enums::RankTier;
+use crate::riot_api::RIOT_API;
 use anyhow::Result;
 use riven::consts::{PlatformRoute, QueueType};
 use riven::models::league_v4::LeagueItem;
-use riven::RiotApi;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::{ActiveValue, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use std::collections::HashMap;
@@ -30,24 +30,23 @@ pub async fn get_players_from_db(
 
 pub async fn get_players_from_api(
     region: PlatformRoute,
-    riot_api: &RiotApi,
 ) -> Result<HashMap<String, (LeagueItem, RankTier)>> {
     let time = std::time::Instant::now();
 
-    let master = riot_api
+    let master = RIOT_API
         .league_v4()
         .get_master_league(region, QueueType::RANKED_SOLO_5x5);
-    let grandmaster = riot_api
+    let grandmaster = RIOT_API
         .league_v4()
         .get_grandmaster_league(region, QueueType::RANKED_SOLO_5x5);
-    let challenger = riot_api
+    let challenger = RIOT_API
         .league_v4()
         .get_challenger_league(region, QueueType::RANKED_SOLO_5x5);
 
+    println!("API queries started for region: {}", region);
     let (master_result, grandmaster_result, challenger_result) =
         try_join!(master, grandmaster, challenger)?;
-
-    println!("API query time taken: {:?}", time.elapsed());
+    println!("API query time taken for {}: {:?}", region, time.elapsed());
 
     let new_time = std::time::Instant::now();
 

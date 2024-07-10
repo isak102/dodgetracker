@@ -6,6 +6,8 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.86"
 dotenv = "0.15.0"
+futures = "0.3.30"
+lazy_static = "1.5.0"
 riven = "2.54.0"
 sea-orm = { version = "^0.12.0", features = [
   "sqlx-mysql",
