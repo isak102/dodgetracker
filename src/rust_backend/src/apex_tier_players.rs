@@ -7,6 +7,7 @@ use sea_orm::sea_query::OnConflict;
 use sea_orm::{ActiveValue, ColumnTrait, DatabaseTransaction, EntityTrait, QueryFilter};
 use tokio::try_join;
 
+use crate::config::INSERT_CHUNK_SIZE;
 use crate::entities::apex_tier_players;
 use crate::entities::sea_orm_active_enums::RankTier;
 use crate::riot_api::RIOT_API;
@@ -80,8 +81,6 @@ pub async fn upsert_players(
     region: PlatformRoute,
     txn: &DatabaseTransaction,
 ) -> Result<()> {
-    const CHUNK_SIZE: usize = 2000; // Define the chunk size
-
     let time = std::time::Instant::now();
 
     let player_models: Vec<apex_tier_players::ActiveModel> = players
@@ -98,7 +97,7 @@ pub async fn upsert_players(
         .collect();
 
     // Chunk the player models
-    for chunk in player_models.chunks(CHUNK_SIZE) {
+    for chunk in player_models.chunks(INSERT_CHUNK_SIZE) {
         apex_tier_players::Entity::insert_many(chunk.to_vec())
             .on_conflict(
                 OnConflict::columns([

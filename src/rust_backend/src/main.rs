@@ -2,13 +2,16 @@ extern crate dotenv;
 use anyhow::Result;
 use futures::future::try_join_all;
 use riven::consts::PlatformRoute;
+use sea_orm::ActiveValue::Set;
 use sea_orm::TransactionTrait;
 
 mod apex_tier_players;
+mod config;
 mod db;
 mod dodges;
 mod entities;
 mod riot_api;
+mod summoners;
 
 const SUPPORTED_REGIONS: [PlatformRoute; 5] = [
     PlatformRoute::EUW1,
@@ -33,7 +36,20 @@ async fn run_region(region: PlatformRoute) -> Result<()> {
     let dodges = dodges::find_dodges(&old_players, &new_players).await;
 
     apex_tier_players::upsert_players(new_players, region, &txn).await?;
-    dodges::insert_dodges(dodges, &txn).await?;
+
+    if !dodges.is_empty() {
+        dodges::insert_dodges(&dodges, &txn).await?;
+
+        let summoner_ids: Vec<&str> = dodges
+            .iter()
+            .filter_map(|dodge| match &dodge.summoner_id {
+                Set(id) => Some(id.as_str()),
+                _ => None,
+            })
+            .collect();
+
+        summoners::update_summoners(&summoner_ids, region, &txn).await?;
+    }
 
     txn.commit().await?;
 

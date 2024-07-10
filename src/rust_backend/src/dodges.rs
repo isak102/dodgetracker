@@ -49,7 +49,7 @@ pub async fn find_dodges(
 }
 
 pub async fn insert_dodges(
-    dodges: Vec<dodges::ActiveModel>,
+    dodges: &Vec<dodges::ActiveModel>,
     txn: &DatabaseTransaction,
 ) -> Result<()> {
     if dodges.is_empty() {
