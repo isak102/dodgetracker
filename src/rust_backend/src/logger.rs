@@ -29,7 +29,7 @@ pub fn init() -> LoggerHandle {
         )
         .format(custom_format)
         .print_message()
-        .create_symlink("current_logfile")
+        .create_symlink("current_log")
         .write_mode(WriteMode::Async)
         .duplicate_to_stderr(flexi_logger::Duplicate::All)
         .start()
