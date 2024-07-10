@@ -63,6 +63,7 @@ pub async fn update_summoners(
                         summoners::Column::AccountId,
                         summoners::Column::ProfileIconId,
                         summoners::Column::SummonerLevel,
+                        summoners::Column::UpdatedAt,
                     ])
                     .to_owned(),
             )
@@ -74,8 +75,8 @@ pub async fn update_summoners(
 
     Ok(summoner_models
         .iter()
-        .filter_map(|s| match s.summoner_id {
-            Set(Some(ref id)) => Some(id.clone()),
+        .filter_map(|s| match s.puuid {
+            Set(ref id) => Some(id.clone()),
             _ => None,
         })
         .collect())

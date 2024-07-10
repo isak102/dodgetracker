@@ -11,6 +11,7 @@ mod db;
 mod dodges;
 mod entities;
 mod riot_api;
+mod riot_ids;
 mod summoners;
 
 const SUPPORTED_REGIONS: [PlatformRoute; 5] = [
@@ -48,7 +49,10 @@ async fn run_region(region: PlatformRoute) -> Result<()> {
             })
             .collect();
 
-        summoners::update_summoners(&summoner_ids, region, &txn).await?;
+        let riot_ids = summoners::update_summoners(&summoner_ids, region, &txn).await?;
+        println!("First riot_id: {}", riot_ids[0]);
+
+        riot_ids::update_riot_ids(&riot_ids, &txn).await?;
     }
 
     txn.commit().await?;

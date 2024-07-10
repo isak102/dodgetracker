@@ -109,6 +109,7 @@ pub async fn upsert_players(
                     apex_tier_players::Column::Wins,
                     apex_tier_players::Column::Losses,
                     apex_tier_players::Column::CurrentLp,
+                    apex_tier_players::Column::UpdatedAt,
                 ])
                 .to_owned(),
             )
