@@ -52,7 +52,11 @@ async fn run_region(region: PlatformRoute) -> Result<()> {
 
         let riot_ids = summoners::update_summoners(&summoner_ids, region, &txn).await?;
 
-        riot_ids::update_riot_ids(&riot_ids, &txn).await?;
+        let riot_id_models = riot_ids::update_riot_ids(&riot_ids, &txn).await?;
+
+        if region == PlatformRoute::EUW1 {
+            lolpros::upsert_lolpros_slugs(&riot_id_models, &txn).await?;
+        }
     }
 
     txn.commit().await?;

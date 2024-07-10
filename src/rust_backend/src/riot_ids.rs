@@ -7,7 +7,10 @@ use tokio::task;
 use crate::config::INSERT_CHUNK_SIZE;
 use crate::{entities::riot_ids, riot_api::RIOT_API};
 
-pub async fn update_riot_ids(puuids: &[String], txn: &DatabaseTransaction) -> Result<()> {
+pub async fn update_riot_ids(
+    puuids: &[String],
+    txn: &DatabaseTransaction,
+) -> Result<Vec<riot_ids::ActiveModel>> {
     let t1 = std::time::Instant::now();
 
     println!("Starting accounts query for {} riot ids", puuids.len());
@@ -67,5 +70,5 @@ pub async fn update_riot_ids(puuids: &[String], txn: &DatabaseTransaction) -> Re
 
     println!("Riot_ids insertion time taken: {:?}", t2.elapsed());
 
-    Ok(())
+    Ok(riot_id_models)
 }
