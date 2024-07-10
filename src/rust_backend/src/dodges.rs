@@ -1,7 +1,8 @@
 use std::{collections::HashMap, time::Instant};
 
 use anyhow::Result;
-use riven::models::league_v4::LeagueItem;
+use log::info;
+use riven::{consts::PlatformRoute, models::league_v4::LeagueItem};
 use sea_orm::{ActiveValue, DatabaseConnection, DatabaseTransaction, EntityTrait};
 
 use crate::entities::{apex_tier_players, dodges, sea_orm_active_enums::RankTier};
@@ -11,8 +12,11 @@ const DECAY_LP_LOSS: i32 = 75;
 pub async fn find_dodges(
     db_players: &HashMap<String, apex_tier_players::Model>,
     api_players: &HashMap<String, (LeagueItem, RankTier)>,
+    region: PlatformRoute,
 ) -> Vec<dodges::ActiveModel> {
     let start_time = Instant::now();
+
+    info!("[{}]: Finding dodges...", region);
 
     let dodges: Vec<dodges::ActiveModel> = api_players
         .values()
@@ -42,25 +46,38 @@ pub async fn find_dodges(
         })
         .collect();
 
-    println!("Dodges detection time taken: {:?}", start_time.elapsed());
-    println!("Found {} dodges", dodges.len());
+    info!(
+        "[{}]: Found {} dodges in {:?}.",
+        region,
+        dodges.len(),
+        start_time.elapsed()
+    );
 
     dodges
 }
 
 pub async fn insert_dodges(
-    dodges: &Vec<dodges::ActiveModel>,
+    dodges: &[dodges::ActiveModel],
     txn: &DatabaseTransaction,
+    region: PlatformRoute,
 ) -> Result<()> {
     if dodges.is_empty() {
         return Ok(());
     }
 
-    let start_time = Instant::now();
-    dodges::Entity::insert_many(dodges.clone())
+    let t1 = Instant::now();
+    info!("[{}]: Inserting dodges...", region);
+
+    dodges::Entity::insert_many(dodges.to_owned())
         .exec(txn)
         .await?;
-    println!("Dodges Insert time taken: {:?}", start_time.elapsed());
+
+    info!(
+        "[{}]: Inserted {} dodges in {:?}.",
+        region,
+        dodges.len(),
+        t1.elapsed()
+    );
 
     Ok(())
 }

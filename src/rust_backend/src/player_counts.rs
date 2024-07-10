@@ -1,4 +1,5 @@
 use anyhow::Result;
+use log::info;
 use riven::consts::PlatformRoute;
 use sea_orm::{
     prelude::ChronoDateTimeUtc, ActiveValue::Set, ColumnTrait, DatabaseTransaction, EntityTrait,
@@ -32,8 +33,13 @@ pub async fn update_player_counts(
     let latest_update_time = get_latest_update_time(region, txn).await?;
 
     if let Some(latest_update_time) = latest_update_time {
-        if latest_update_time > chrono::Utc::now() - chrono::Duration::hours(1) {
-            println!("Skipping player counts update for region: {}", region);
+        let time_diff = chrono::Utc::now() - latest_update_time;
+        if time_diff < chrono::Duration::hours(1) {
+            info!(
+                "[{}]: Skipping player counts update, last update was {}min ago.",
+                region,
+                time_diff.num_minutes()
+            );
             return Ok(());
         }
     }
@@ -59,8 +65,8 @@ pub async fn update_player_counts(
         },
     ];
 
-    println!(
-        "Updating player counts for {}: [M: {}, GM: {}, C: {}]",
+    info!(
+        "[{}]: Updating player counts: [M: {}, GM: {}, C: {}]",
         region, master_count, grandmaster_count, challenger_count
     );
 

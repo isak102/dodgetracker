@@ -1,4 +1,5 @@
 use anyhow::Result;
+use log::info;
 use sea_orm::{sea_query::OnConflict, ActiveValue::Set, DatabaseTransaction, EntityTrait};
 use serde::Deserialize;
 use tokio::task;
@@ -29,7 +30,11 @@ pub async fn upsert_lolpros_slugs(
     txn: &DatabaseTransaction,
 ) -> Result<()> {
     let t1 = std::time::Instant::now();
-    println!("Starting lolpros query for {} accounts", accounts.len());
+    info!(
+        "[EUW1]: Starting lolpros query for {} accounts...",
+        accounts.len()
+    );
+
     let futures = accounts.iter().map(|model| {
         let game_name = model.game_name.clone().unwrap();
         let tag_line = model.tag_line.clone().unwrap();
@@ -37,7 +42,7 @@ pub async fn upsert_lolpros_slugs(
     });
 
     let results: Vec<_> = futures::future::join_all(futures).await;
-    println!("Lolpros API query time taken: {:?}", t1.elapsed());
+    info!("[EUW1]: Lolpros query time taken: {:?}.", t1.elapsed());
 
     let accounts_with_slug: Vec<riot_ids::ActiveModel> = accounts
         .iter()
@@ -53,8 +58,8 @@ pub async fn upsert_lolpros_slugs(
         .collect();
 
     let t2 = std::time::Instant::now();
-    println!(
-        "Inserting {} lolpros slugs into DB",
+    info!(
+        "[EUW1]: Upserting {} lolpros slugs into DB...",
         accounts_with_slug.len()
     );
 
@@ -69,6 +74,10 @@ pub async fn upsert_lolpros_slugs(
             .await?;
     }
 
-    println!("Lolpros upsert time taken: {:?}", t2.elapsed());
+    info!(
+        "[EUW1]: Upserted {} lolpros slugs into DB in {:?}.",
+        accounts_with_slug.len(),
+        t2.elapsed()
+    );
     Ok(())
 }

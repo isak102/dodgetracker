@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
+use log::info;
 use riven::{consts::PlatformRoute, models::league_v4::LeagueItem};
 use sea_orm::{
     prelude::{ChronoDateTimeUtc, DateTimeUtc},
@@ -53,6 +54,8 @@ async fn get_demotions(
         .all(txn)
         .await?;
 
+    info!("[{}]: Getting demotions from DB...", region);
+
     let result = demotions.into_iter().fold(
         HashMap::new(),
         |mut acc: HashMap<String, Vec<DateTimeUtc>>, demotion| {
@@ -63,9 +66,10 @@ async fn get_demotions(
         },
     );
 
-    println!(
-        "Demotions query for region {} time taken: {:?}",
+    info!(
+        "[{}]: Got {} demotions from DB in {:?}.",
         region,
+        result.len(),
         time.elapsed()
     );
 
@@ -81,6 +85,8 @@ pub async fn insert_promotions(
     let demotions = get_demotions(region, txn).await?;
 
     let t1 = std::time::Instant::now();
+    info!("[{}]: Finding promotions...", region);
+
     let promotions_models: Vec<promotions::ActiveModel> = api_players
         .iter()
         .filter_map(|(summoner_id, (stats, _))| {
@@ -98,16 +104,11 @@ pub async fn insert_promotions(
         })
         .collect();
 
-    println!(
-        "Finding promotions for region {} time taken: {:?}",
+    info!(
+        "[{}]: Found {} promotions in {:?}.",
         region,
+        promotions_models.len(),
         t1.elapsed()
-    );
-
-    println!(
-        "{} Promotions to insert: {}",
-        region,
-        promotions_models.len()
     );
 
     for chunk in promotions_models.chunks(INSERT_CHUNK_SIZE) {
@@ -132,6 +133,7 @@ pub async fn insert_demotions(
         .collect();
 
     let demotions = get_demotions(region, txn).await?;
+    info!("[{}]: Finding new demotions...", region);
 
     let t1 = std::time::Instant::now();
     let demotion_models: Vec<demotions::ActiveModel> = players_not_in_api
@@ -153,13 +155,12 @@ pub async fn insert_demotions(
         })
         .collect();
 
-    println!(
-        "Finding demotions for region {} time taken: {:?}",
+    info!(
+        "[{}]: Found {} demotions in {:?}.",
         region,
+        demotion_models.len(),
         t1.elapsed()
     );
-
-    println!("{} Demotions to insert: {}", region, demotion_models.len());
 
     for chunk in demotion_models.chunks(INSERT_CHUNK_SIZE) {
         demotions::Entity::insert_many(chunk.to_vec())

@@ -1,4 +1,6 @@
 use anyhow::Result;
+use log::{info, warn};
+use riven::consts::PlatformRoute;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::DatabaseTransaction;
 use sea_orm::{ActiveValue::Set, EntityTrait};
@@ -9,11 +11,17 @@ use crate::{entities::riot_ids, riot_api::RIOT_API};
 
 pub async fn update_riot_ids(
     puuids: &[String],
+    region: PlatformRoute,
     txn: &DatabaseTransaction,
 ) -> Result<Vec<riot_ids::ActiveModel>> {
     let t1 = std::time::Instant::now();
 
-    println!("Starting accounts query for {} riot ids", puuids.len());
+    info!(
+        "[{}]: Getting account info from API for {} Riot IDs...",
+        region,
+        puuids.len()
+    );
+
     let futures = puuids.iter().map(|puuid| {
         task::spawn(
             RIOT_API
@@ -23,7 +31,7 @@ pub async fn update_riot_ids(
     });
 
     let results: Vec<_> = futures::future::join_all(futures).await;
-    println!("Accounts API query time taken: {:?}", t1.elapsed());
+    info!("[{}]: Got accounts from API in {:?}.", region, t1.elapsed());
 
     let riot_id_models: Vec<riot_ids::ActiveModel> = results
         .iter()
@@ -39,7 +47,10 @@ pub async fn update_riot_ids(
                         ..Default::default()
                     })
                 } else {
-                    println!("Missing game_name or tag_line for puuid: {}", a.puuid);
+                    warn!(
+                        "[{}]: Missing game_name or tag_line for puuid: {}",
+                        region, a.puuid
+                    );
                     None
                 }
             }
@@ -51,7 +62,11 @@ pub async fn update_riot_ids(
         .collect();
 
     let t2 = std::time::Instant::now();
-    println!("Inserting {} riot ids into DB", riot_id_models.len());
+    info!(
+        "[{}]: Inserting {} Riot IDs into DB...",
+        region,
+        riot_id_models.len()
+    );
 
     for chunk in riot_id_models.chunks(INSERT_CHUNK_SIZE) {
         riot_ids::Entity::insert_many(chunk.to_vec())
@@ -68,7 +83,12 @@ pub async fn update_riot_ids(
             .await?;
     }
 
-    println!("Riot_ids insertion time taken: {:?}", t2.elapsed());
+    info!(
+        "[{}]: Inserted {} Riot IDs into DB in {:?}.",
+        region,
+        riot_id_models.len(),
+        t2.elapsed()
+    );
 
     Ok(riot_id_models)
 }

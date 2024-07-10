@@ -1,6 +1,7 @@
 extern crate dotenv;
 use anyhow::Result;
 use futures::future::try_join_all;
+use log::info;
 use riven::consts::PlatformRoute;
 use sea_orm::ActiveValue::Set;
 use sea_orm::TransactionTrait;
@@ -10,6 +11,7 @@ mod config;
 mod db;
 mod dodges;
 mod entities;
+mod logger;
 mod lolpros;
 mod player_counts;
 mod promotions_demotions;
@@ -26,7 +28,10 @@ const SUPPORTED_REGIONS: [PlatformRoute; 5] = [
 ];
 
 async fn run_region(region: PlatformRoute) -> Result<()> {
+    let t1 = std::time::Instant::now();
+    info!("[{}]: Getting DB connection...", region);
     let db = db::get_db().await;
+    info!("[{}]: Starting transaction...", region);
     let txn = db.begin().await?;
 
     let (api_players, (master_count, grandmaster_count, challenger_count)) =
@@ -39,7 +44,7 @@ async fn run_region(region: PlatformRoute) -> Result<()> {
         .await
         .unwrap();
 
-    let dodges = dodges::find_dodges(&db_players, &api_players).await;
+    let dodges = dodges::find_dodges(&db_players, &api_players, region).await;
 
     if !dodges.is_empty() {
         let summoner_ids: Vec<&str> = dodges
@@ -52,13 +57,13 @@ async fn run_region(region: PlatformRoute) -> Result<()> {
 
         let riot_ids = summoners::update_summoners(&summoner_ids, region, &txn).await?;
 
-        let riot_id_models = riot_ids::update_riot_ids(&riot_ids, &txn).await?;
+        let riot_id_models = riot_ids::update_riot_ids(&riot_ids, region, &txn).await?;
 
         if region == PlatformRoute::EUW1 {
             lolpros::upsert_lolpros_slugs(&riot_id_models, &txn).await?;
         }
 
-        dodges::insert_dodges(&dodges, &txn).await?;
+        dodges::insert_dodges(&dodges, &txn, region).await?;
     }
 
     apex_tier_players::upsert_players(&api_players, region, &txn).await?;
@@ -75,7 +80,13 @@ async fn run_region(region: PlatformRoute) -> Result<()> {
     )
     .await?;
 
+    info!("[{}]: Committing transaction...", region);
     txn.commit().await?;
+    info!(
+        "[{}]: PERFORMANCE: Region update took {:?}.",
+        region,
+        t1.elapsed()
+    );
 
     Ok(())
 }
@@ -102,9 +113,6 @@ async fn run() -> Result<()> {
 
 #[tokio::main]
 async fn main() {
-    let time = std::time::Instant::now();
-    if let Err(e) = run().await {
-        eprintln!("Application error: {:?}", e);
-    }
-    println!("Total time elapsed: {:?}", time.elapsed());
+    let _logger = logger::init();
+    run().await.unwrap();
 }

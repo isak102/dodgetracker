@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
+use log::info;
 use riven::consts::{PlatformRoute, QueueType};
 use riven::models::league_v4::LeagueItem;
 use sea_orm::sea_query::OnConflict;
@@ -18,6 +19,8 @@ pub async fn get_players_from_db(
 ) -> Result<HashMap<String, apex_tier_players::Model>> {
     let time = std::time::Instant::now();
 
+    info!("[{}]: Getting apex tier players from DB...", region);
+
     let result: HashMap<String, apex_tier_players::Model> = apex_tier_players::Entity::find()
         .filter(apex_tier_players::Column::Region.eq(region.to_string()))
         .all(txn)
@@ -26,7 +29,12 @@ pub async fn get_players_from_db(
         .map(|model| (model.summoner_id.clone(), model))
         .collect();
 
-    println!("Apex tier DB query time taken: {:?}", time.elapsed());
+    info!(
+        "[{}]: Got {} players from DB in {:?}.",
+        region,
+        result.len(),
+        time.elapsed()
+    );
 
     Ok(result)
 }
@@ -49,11 +57,13 @@ pub async fn get_players_from_api(
         .league_v4()
         .get_challenger_league(region, QueueType::RANKED_SOLO_5x5);
 
-    println!("Apex tiers API queries started for region: {}", region);
+    info!("[{}]: Getting apex tier players from API...", region);
+
     let (master_result, grandmaster_result, challenger_result) =
         try_join!(master, grandmaster, challenger)?;
-    println!(
-        "Apex tiers API query time taken for {}: {:?}",
+
+    info!(
+        "[{}]: Apex tiers API query time: {:?}",
         region,
         time.elapsed()
     );
@@ -84,7 +94,11 @@ pub async fn get_players_from_api(
         )
         .collect();
 
-    println!("API result processing time taken: {:?}", new_time.elapsed());
+    info!(
+        "[{}]: API result processing time taken: {:?}",
+        region,
+        new_time.elapsed()
+    );
 
     Ok((result, (master_count, grandmaster_count, challenger_count)))
 }
@@ -109,8 +123,8 @@ pub async fn upsert_players(
         })
         .collect();
 
-    // Chunk the player models
     for chunk in player_models.chunks(INSERT_CHUNK_SIZE) {
+        info!("[{}]: Upserting {} players into DB...", region, chunk.len());
         apex_tier_players::Entity::insert_many(chunk.to_vec())
             .on_conflict(
                 OnConflict::columns([
@@ -130,7 +144,12 @@ pub async fn upsert_players(
             .await?;
     }
 
-    println!("Upsert time taken: {:?}", time.elapsed());
+    info!(
+        "[{}]: Upserted {} players into DB in {:?}.",
+        region,
+        player_models.len(),
+        time.elapsed(),
+    );
 
     Ok(())
 }

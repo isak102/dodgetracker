@@ -1,4 +1,5 @@
 use anyhow::Result;
+use log::{info, warn};
 use riven::consts::PlatformRoute;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::DatabaseTransaction;
@@ -17,10 +18,10 @@ pub async fn update_summoners(
     txn: &DatabaseTransaction,
 ) -> Result<Vec<String>> {
     let t1 = std::time::Instant::now();
-    println!(
-        "Updating {} summoners for region: {}",
-        summoner_ids.len(),
-        region
+    info!(
+        "[{}]: Getting summoner info from API for {} summoners...",
+        region,
+        summoner_ids.len()
     );
 
     let futures = summoner_ids
@@ -29,8 +30,8 @@ pub async fn update_summoners(
 
     let results: Vec<_> = futures::future::join_all(futures).await;
 
-    println!(
-        "{} Summoners API query time taken: {:?}",
+    info!(
+        "[{}]: Got summoners from API in {:?}.",
         region,
         t1.elapsed()
     );
@@ -47,11 +48,19 @@ pub async fn update_summoners(
                 summoner_level: Set(s.summoner_level),
                 ..Default::default()
             }),
-            Err(_) => None,
+            Err(_) => {
+                warn!("[{}]: A summoner API query failed.", region);
+                None
+            }
         })
         .collect();
 
     let t2 = std::time::Instant::now();
+    info!(
+        "[{}]: Upserting {} summoners into DB...",
+        region,
+        summoner_models.len()
+    );
 
     for chunk in summoner_models.chunks(INSERT_CHUNK_SIZE) {
         summoners::Entity::insert_many(chunk.to_vec())
@@ -71,7 +80,12 @@ pub async fn update_summoners(
             .await?;
     }
 
-    println!("{} Summoners insert time taken: {:?}", region, t2.elapsed());
+    info!(
+        "[{}]: Upserted {} summoners into DB in {:?}.",
+        region,
+        summoner_models.len(),
+        t2.elapsed()
+    );
 
     Ok(summoner_models
         .iter()
