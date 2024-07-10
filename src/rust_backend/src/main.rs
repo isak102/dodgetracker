@@ -36,10 +36,10 @@ lazy_static! {
     static ref THROTTLES: HashMap<PlatformRoute, i32> = {
         let mut m = HashMap::new();
         m.insert(PlatformRoute::EUW1, 3);
-        m.insert(PlatformRoute::EUN1, 3);
-        m.insert(PlatformRoute::NA1, 10);
-        m.insert(PlatformRoute::KR, 10);
-        m.insert(PlatformRoute::OC1, 5);
+        m.insert(PlatformRoute::EUN1, 6);
+        m.insert(PlatformRoute::NA1, 12);
+        m.insert(PlatformRoute::KR, 12);
+        m.insert(PlatformRoute::OC1, 6);
         m
     };
 }
@@ -72,6 +72,7 @@ async fn run_region(region: PlatformRoute) {
             }
         };
 
+        let t2 = std::time::Instant::now();
         let (api_players, (master_count, grandmaster_count, challenger_count)) =
             match apex_tier_players::get_players_from_api(region).await {
                 Ok(r) => r,
@@ -182,12 +183,16 @@ async fn run_region(region: PlatformRoute) {
             t1.elapsed()
         );
 
-        info!(
-            "[{}]: Sleeping for {} seconds...",
-            region, THROTTLES[&region]
-        );
-
-        sleep(tokio::time::Duration::from_secs(THROTTLES[&region] as u64)).await;
+        if let Some(sleep_duration) =
+            Duration::from_secs(THROTTLES[&region] as u64).checked_sub(t2.elapsed())
+        {
+            info!(
+                "[{}]: Sleeping for {} seconds...",
+                region,
+                sleep_duration.as_secs_f32()
+            );
+            sleep(sleep_duration).await;
+        }
     }
 
     ()
