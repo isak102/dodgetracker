@@ -11,10 +11,10 @@ mod db;
 mod dodges;
 mod entities;
 mod lolpros;
+mod promotions_demotions;
 mod riot_api;
 mod riot_ids;
 mod summoners;
-mod promotions_demotions;
 
 const SUPPORTED_REGIONS: [PlatformRoute; 5] = [
     PlatformRoute::EUW1,
@@ -38,11 +38,7 @@ async fn run_region(region: PlatformRoute) -> Result<()> {
 
     let dodges = dodges::find_dodges(&old_players, &new_players).await;
 
-    apex_tier_players::upsert_players(new_players, region, &txn).await?;
-
     if !dodges.is_empty() {
-        dodges::insert_dodges(&dodges, &txn).await?;
-
         let summoner_ids: Vec<&str> = dodges
             .iter()
             .filter_map(|dodge| match &dodge.summoner_id {
@@ -58,9 +54,16 @@ async fn run_region(region: PlatformRoute) -> Result<()> {
         if region == PlatformRoute::EUW1 {
             lolpros::upsert_lolpros_slugs(&riot_id_models, &txn).await?;
         }
+
+        dodges::insert_dodges(&dodges, &txn).await?;
     }
 
-    txn.commit().await?;
+    apex_tier_players::upsert_players(&new_players, region, &txn).await?;
+
+    promotions_demotions::insert_promotions(&new_players, &old_players, region, &txn).await?;
+    promotions_demotions::insert_demotions(&new_players, &old_players, region, &txn).await?;
+
+    // txn.commit().await?;
 
     Ok(())
 }

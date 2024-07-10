@@ -3,43 +3,15 @@ use std::collections::HashMap;
 use anyhow::Result;
 use riven::{consts::PlatformRoute, models::league_v4::LeagueItem};
 use sea_orm::{
-    prelude::ChronoDateTimeUtc, ActiveValue::Set, ColumnTrait, DatabaseTransaction, EntityTrait,
-    QueryFilter,
+    prelude::{ChronoDateTimeUtc, DateTimeUtc},
+    ActiveValue::Set,
+    ColumnTrait, DatabaseTransaction, EntityTrait, QueryFilter,
 };
 
 use crate::{
     config::INSERT_CHUNK_SIZE,
     entities::{apex_tier_players, demotions, promotions, sea_orm_active_enums::RankTier},
 };
-
-async fn get_demotions(
-    region: PlatformRoute,
-    txn: &DatabaseTransaction,
-) -> Result<HashMap<String, Vec<ChronoDateTimeUtc>>> {
-    let time = std::time::Instant::now();
-
-    let demotions: Vec<demotions::Model> = demotions::Entity::find()
-        .filter(demotions::Column::Region.eq(region.to_string()))
-        .all(txn)
-        .await?;
-
-    let result = demotions
-        .into_iter()
-        .fold(HashMap::new(), |mut acc, demotion| {
-            acc.entry(demotion.summoner_id)
-                .or_insert_with(Vec::new)
-                .push(demotion.created_at);
-            acc
-        });
-
-    println!(
-        "Demotions query for region {} time taken: {:?}",
-        region,
-        time.elapsed()
-    );
-
-    Ok(result)
-}
 
 fn has_promoted(
     summoner_id: &String,
@@ -57,7 +29,50 @@ fn has_promoted(
     }
 }
 
-pub async fn register_promotions(
+fn has_demoted(
+    player: &apex_tier_players::Model,
+    player_demotions: Option<&Vec<ChronoDateTimeUtc>>,
+) -> bool {
+    match player_demotions {
+        None => true,
+        Some(demotions) => !demotions
+            .iter()
+            .any(|demotion| demotion > &player.updated_at),
+    }
+}
+
+// TODO: only execute this once and pass it down
+async fn get_demotions(
+    region: PlatformRoute,
+    txn: &DatabaseTransaction,
+) -> Result<HashMap<String, Vec<ChronoDateTimeUtc>>> {
+    let time = std::time::Instant::now();
+
+    let demotions: Vec<demotions::Model> = demotions::Entity::find()
+        .filter(demotions::Column::Region.eq(region.to_string()))
+        .all(txn)
+        .await?;
+
+    let result = demotions.into_iter().fold(
+        HashMap::new(),
+        |mut acc: HashMap<String, Vec<DateTimeUtc>>, demotion| {
+            acc.entry(demotion.summoner_id)
+                .or_default()
+                .push(demotion.created_at);
+            acc
+        },
+    );
+
+    println!(
+        "Demotions query for region {} time taken: {:?}",
+        region,
+        time.elapsed()
+    );
+
+    Ok(result)
+}
+
+pub async fn insert_promotions(
     api_players: &HashMap<String, (LeagueItem, RankTier)>,
     db_players: &HashMap<String, apex_tier_players::Model>,
     region: PlatformRoute,
@@ -89,8 +104,65 @@ pub async fn register_promotions(
         t1.elapsed()
     );
 
+    println!(
+        "{} Promotions to insert: {}",
+        region,
+        promotions_models.len()
+    );
+
     for chunk in promotions_models.chunks(INSERT_CHUNK_SIZE) {
         promotions::Entity::insert_many(chunk.to_vec())
+            .exec(txn)
+            .await?;
+    }
+
+    Ok(())
+}
+
+pub async fn insert_demotions(
+    api_players: &HashMap<String, (LeagueItem, RankTier)>,
+    db_players: &HashMap<String, apex_tier_players::Model>,
+    region: PlatformRoute,
+    txn: &DatabaseTransaction,
+) -> Result<()> {
+    let players_not_in_api: HashMap<String, apex_tier_players::Model> = db_players
+        .iter()
+        .filter(|(summoner_id, _)| !api_players.contains_key(*summoner_id))
+        .map(|(summoner_id, player)| (summoner_id.clone(), player.clone()))
+        .collect();
+
+    let demotions = get_demotions(region, txn).await?;
+
+    let t1 = std::time::Instant::now();
+    let demotion_models: Vec<demotions::ActiveModel> = players_not_in_api
+        .iter()
+        .filter_map(|(summoner_id, player)| {
+            let player_demotions = demotions.get(summoner_id);
+
+            if has_demoted(player, player_demotions) {
+                Some(demotions::ActiveModel {
+                    summoner_id: Set(summoner_id.clone()),
+                    region: Set(region.to_string()),
+                    at_wins: Set(player.wins),
+                    at_losses: Set(player.losses),
+                    ..Default::default()
+                })
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    println!(
+        "Finding demotions for region {} time taken: {:?}",
+        region,
+        t1.elapsed()
+    );
+
+    println!("{} Demotions to insert: {}", region, demotion_models.len());
+
+    for chunk in demotion_models.chunks(INSERT_CHUNK_SIZE) {
+        demotions::Entity::insert_many(chunk.to_vec())
             .exec(txn)
             .await?;
     }

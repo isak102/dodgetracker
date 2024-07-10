@@ -81,7 +81,7 @@ pub async fn get_players_from_api(
 }
 
 pub async fn upsert_players(
-    players: HashMap<String, (LeagueItem, RankTier)>,
+    players: &HashMap<String, (LeagueItem, RankTier)>,
     region: PlatformRoute,
     txn: &DatabaseTransaction,
 ) -> Result<()> {
