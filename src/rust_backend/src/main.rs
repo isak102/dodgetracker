@@ -14,6 +14,7 @@ mod lolpros;
 mod riot_api;
 mod riot_ids;
 mod summoners;
+mod promotions_demotions;
 
 const SUPPORTED_REGIONS: [PlatformRoute; 5] = [
     PlatformRoute::EUW1,
