@@ -1,5 +1,5 @@
 use anyhow::Result;
-use log::info;
+use log::{error, info};
 use sea_orm::{sea_query::OnConflict, ActiveValue::Set, DatabaseTransaction, EntityTrait};
 use serde::Deserialize;
 use tokio::task;
@@ -47,12 +47,16 @@ pub async fn upsert_lolpros_slugs(
     let accounts_with_slug: Vec<riot_ids::ActiveModel> = accounts
         .iter()
         .zip(results)
-        .filter_map(|(model, result)| match result {
-            Ok(Ok(Some(slug))) => Some(riot_ids::ActiveModel {
+        .filter_map(|(model, result)| match result.ok()? {
+            Ok(Some(slug)) => Some(riot_ids::ActiveModel {
                 puuid: model.puuid.clone(),
                 lolpros_slug: Set(Some(slug)),
                 ..Default::default()
             }),
+            Err(e) => {
+                error!("[EUW1]: A lolpros API query failed: {:?}", e);
+                None
+            }
             _ => None,
         })
         .collect();

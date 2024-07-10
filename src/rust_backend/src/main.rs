@@ -4,10 +4,12 @@ use std::collections::HashMap;
 use anyhow::Result;
 use futures::future::try_join_all;
 use lazy_static::lazy_static;
-use log::info;
+use log::{error, info};
 use riven::consts::PlatformRoute;
 use sea_orm::ActiveValue::Set;
 use sea_orm::TransactionTrait;
+use tokio::time::sleep;
+use tokio::time::Duration;
 
 mod apex_tier_players;
 mod config;
@@ -42,27 +44,52 @@ lazy_static! {
     };
 }
 
-async fn run_region(region: PlatformRoute) -> Result<()> {
+const RETRY_WAIT: usize = 5;
+
+async fn sleep_thread(duration: Duration, region: PlatformRoute) {
+    info!(
+        "[{}]: Sleeping for {} seconds...",
+        region,
+        duration.as_secs()
+    );
+    sleep(duration).await;
+}
+
+async fn run_region(region: PlatformRoute) {
     info!("[{}]: Getting DB connection...", region);
     let db = db::get_db().await;
 
     loop {
         let t1 = std::time::Instant::now();
+
         info!("[{}]: Starting transaction...", region);
-        let txn = db.begin().await?;
+        let txn = match db.begin().await {
+            Ok(txn) => txn,
+            Err(e) => {
+                error!("[{}]: Failed to start transaction: {}", region, e);
+                sleep_thread(Duration::from_secs(RETRY_WAIT as u64), region).await;
+                continue;
+            }
+        };
 
         let (api_players, (master_count, grandmaster_count, challenger_count)) =
             match apex_tier_players::get_players_from_api(region).await {
                 Ok(r) => r,
-                Err(_) => {
-                    // TODO: Wait for a bit here, then continue the loop
-                    break;
+                Err(e) => {
+                    error!("[{}]: Error getting players from Riot API: {}", region, e);
+                    sleep_thread(Duration::from_secs(RETRY_WAIT as u64), region).await;
+                    continue;
                 }
             };
 
-        let db_players = apex_tier_players::get_players_from_db(&txn, region)
-            .await
-            .unwrap();
+        let db_players = match apex_tier_players::get_players_from_db(&txn, region).await {
+            Ok(res) => res,
+            Err(e) => {
+                error!("[{}]: Error getting players from DB: {}", region, e);
+                sleep_thread(Duration::from_secs(RETRY_WAIT as u64), region).await;
+                continue;
+            }
+        };
 
         let dodges = dodges::find_dodges(&db_players, &api_players, region).await;
 
@@ -75,33 +102,80 @@ async fn run_region(region: PlatformRoute) -> Result<()> {
                 })
                 .collect();
 
-            let riot_ids = summoners::update_summoners(&summoner_ids, region, &txn).await?;
+            let riot_ids = match summoners::update_summoners(&summoner_ids, region, &txn).await {
+                Ok(res) => res,
+                Err(e) => {
+                    error!("[{}]: Error updating summoners table: {}", region, e);
+                    sleep_thread(Duration::from_secs(RETRY_WAIT as u64), region).await;
+                    continue;
+                }
+            };
 
-            let riot_id_models = riot_ids::update_riot_ids(&riot_ids, region, &txn).await?;
+            let riot_id_models = match riot_ids::update_riot_ids(&riot_ids, region, &txn).await {
+                Ok(res) => res,
+                Err(e) => {
+                    error!("[{}]: Error updating riot_ids table: {}", region, e);
+                    sleep_thread(Duration::from_secs(RETRY_WAIT as u64), region).await;
+                    continue;
+                }
+            };
 
-            if region == PlatformRoute::EUW1 {
-                lolpros::upsert_lolpros_slugs(&riot_id_models, &txn).await?;
+            if let Err(e) = lolpros::upsert_lolpros_slugs(&riot_id_models, &txn).await {
+                error!(
+                    "[{}]: Error upserting Lolpros slugs: {}. Ignoring.",
+                    region, e
+                );
             }
 
-            dodges::insert_dodges(&dodges, &txn, region).await?;
+            if let Err(e) = dodges::insert_dodges(&dodges, &txn, region).await {
+                error!("[{}]: Error inserting dodges: {}", region, e);
+                sleep_thread(Duration::from_secs(RETRY_WAIT as u64), region).await;
+                continue;
+            }
         }
 
-        apex_tier_players::upsert_players(&api_players, region, &txn).await?;
+        if let Err(e) = apex_tier_players::upsert_players(&api_players, region, &txn).await {
+            error!("[{}]: Error upserting players: {}", region, e);
+            sleep_thread(Duration::from_secs(RETRY_WAIT as u64), region).await;
+            continue;
+        }
 
-        promotions_demotions::insert_promotions(&api_players, &db_players, region, &txn).await?;
-        promotions_demotions::insert_demotions(&api_players, &db_players, region, &txn).await?;
+        if let Err(e) =
+            promotions_demotions::insert_promotions(&api_players, &db_players, region, &txn).await
+        {
+            error!("[{}]: Error inserting promotions: {}", region, e);
+            sleep_thread(Duration::from_secs(RETRY_WAIT as u64), region).await;
+            continue;
+        }
+        if let Err(e) =
+            promotions_demotions::insert_demotions(&api_players, &db_players, region, &txn).await
+        {
+            error!("[{}]: Error inserting demotions: {}", region, e);
+            sleep_thread(Duration::from_secs(RETRY_WAIT as u64), region).await;
+            continue;
+        }
 
-        player_counts::update_player_counts(
+        if let Err(e) = player_counts::update_player_counts(
             master_count,
             grandmaster_count,
             challenger_count,
             region,
             &txn,
         )
-        .await?;
+        .await
+        {
+            error!(
+                "[{}]: Error updating player counts: {}. Ignoring.",
+                region, e
+            );
+        }
 
         info!("[{}]: Committing transaction...", region);
-        txn.commit().await?;
+        if let Err(e) = txn.commit().await {
+            error!("[{}]: Failed to commit transaction: {:?}", region, e);
+            sleep_thread(Duration::from_secs(RETRY_WAIT as u64), region).await;
+            continue;
+        }
         info!(
             "[{}]: PERFORMANCE: Region update took {:?}.",
             region,
@@ -112,10 +186,11 @@ async fn run_region(region: PlatformRoute) -> Result<()> {
             "[{}]: Sleeping for {} seconds...",
             region, THROTTLES[&region]
         );
-        tokio::time::sleep(tokio::time::Duration::from_secs(THROTTLES[&region] as u64)).await;
+
+        sleep(tokio::time::Duration::from_secs(THROTTLES[&region] as u64)).await;
     }
 
-    Ok(())
+    ()
 }
 
 async fn run() -> Result<()> {
@@ -127,13 +202,6 @@ async fn run() -> Result<()> {
 
     // Wait for all tasks to complete and collect the results
     let results = try_join_all(tasks).await?;
-
-    // Handle any errors from the tasks
-    for result in results {
-        if let Err(e) = result {
-            eprintln!("Error running region task: {:?}", e);
-        }
-    }
 
     Ok(())
 }
