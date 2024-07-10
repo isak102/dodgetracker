@@ -4,9 +4,7 @@ use anyhow::Result;
 use riven::consts::{PlatformRoute, QueueType};
 use riven::models::league_v4::LeagueItem;
 use sea_orm::sea_query::OnConflict;
-use sea_orm::{
-    ActiveValue, ColumnTrait, DatabaseConnection, DatabaseTransaction, EntityTrait, QueryFilter,
-};
+use sea_orm::{ActiveValue, ColumnTrait, DatabaseTransaction, EntityTrait, QueryFilter};
 use tokio::try_join;
 
 use crate::entities::apex_tier_players;
