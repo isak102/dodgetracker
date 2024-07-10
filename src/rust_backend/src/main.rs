@@ -2,6 +2,7 @@ extern crate dotenv;
 use anyhow::Result;
 use futures::future::try_join_all;
 use riven::consts::PlatformRoute;
+use sea_orm::TransactionTrait;
 
 mod db;
 mod dodges;
@@ -19,14 +20,20 @@ const SUPPORTED_REGIONS: [PlatformRoute; 5] = [
 
 async fn run_region(region: PlatformRoute) -> Result<()> {
     let db = db::get_db().await;
+    let txn = db.begin().await?;
 
-    let new_players = players::get_players_from_api(region).await.unwrap();
-    let old_players = players::get_players_from_db(db, region).await.unwrap();
+    let new_players = match players::get_players_from_api(region).await {
+        Ok(players) => players,
+        Err(_) => return Ok(()),
+    };
+    let old_players = players::get_players_from_db(&txn, region).await.unwrap();
 
     let dodges = dodges::find_dodges(&old_players, &new_players).await;
 
-    players::upsert_players(new_players, region, db).await?;
-    dodges::insert_dodges(dodges, db).await?;
+    players::upsert_players(new_players, region, &txn).await?;
+    dodges::insert_dodges(dodges, &txn).await?;
+
+    txn.commit().await?;
 
     Ok(())
 }

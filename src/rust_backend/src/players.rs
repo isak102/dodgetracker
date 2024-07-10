@@ -4,7 +4,9 @@ use anyhow::Result;
 use riven::consts::{PlatformRoute, QueueType};
 use riven::models::league_v4::LeagueItem;
 use sea_orm::sea_query::OnConflict;
-use sea_orm::{ActiveValue, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use sea_orm::{
+    ActiveValue, ColumnTrait, DatabaseConnection, DatabaseTransaction, EntityTrait, QueryFilter,
+};
 use tokio::try_join;
 
 use crate::entities::apex_tier_players;
@@ -12,14 +14,14 @@ use crate::entities::sea_orm_active_enums::RankTier;
 use crate::riot_api::RIOT_API;
 
 pub async fn get_players_from_db(
-    db: &DatabaseConnection,
+    txn: &DatabaseTransaction,
     region: PlatformRoute,
 ) -> Result<HashMap<String, apex_tier_players::Model>> {
     let time = std::time::Instant::now();
 
     let result: HashMap<String, apex_tier_players::Model> = apex_tier_players::Entity::find()
         .filter(apex_tier_players::Column::Region.eq(region.to_string()))
-        .all(db)
+        .all(txn)
         .await?
         .into_iter()
         .map(|model| (model.summoner_id.clone(), model))
@@ -78,7 +80,7 @@ pub async fn get_players_from_api(
 pub async fn upsert_players(
     players: HashMap<String, (LeagueItem, RankTier)>,
     region: PlatformRoute,
-    db: &DatabaseConnection,
+    txn: &DatabaseTransaction,
 ) -> Result<()> {
     const CHUNK_SIZE: usize = 2000; // Define the chunk size
 
@@ -113,7 +115,7 @@ pub async fn upsert_players(
                 ])
                 .to_owned(),
             )
-            .exec(db)
+            .exec(txn)
             .await?;
     }
 

@@ -2,7 +2,7 @@ use std::{collections::HashMap, time::Instant};
 
 use anyhow::Result;
 use riven::models::league_v4::LeagueItem;
-use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait};
+use sea_orm::{ActiveValue, DatabaseConnection, DatabaseTransaction, EntityTrait};
 
 use crate::entities::{apex_tier_players, dodges, sea_orm_active_enums::RankTier};
 
@@ -50,14 +50,16 @@ pub async fn find_dodges(
 
 pub async fn insert_dodges(
     dodges: Vec<dodges::ActiveModel>,
-    db: &DatabaseConnection,
+    txn: &DatabaseTransaction,
 ) -> Result<()> {
     if dodges.is_empty() {
         return Ok(());
     }
 
     let start_time = Instant::now();
-    dodges::Entity::insert_many(dodges.clone()).exec(db).await?;
+    dodges::Entity::insert_many(dodges.clone())
+        .exec(txn)
+        .await?;
     println!("Dodges Insert time taken: {:?}", start_time.elapsed());
 
     Ok(())
