@@ -1,4 +1,17 @@
-use flexi_logger::{Cleanup, Criterion, Logger, LoggerHandle, Naming, WriteMode};
+use std::io::Write;
+
+use flexi_logger::{Cleanup, Criterion, DeferredNow, Logger, LoggerHandle, Naming, WriteMode};
+use log::Record;
+
+fn custom_format(w: &mut dyn Write, now: &mut DeferredNow, record: &Record) -> std::io::Result<()> {
+    write!(
+        w,
+        "{} [{}] {}",
+        record.level(),
+        now.now().format("%Y-%m-%d %H:%M:%S%.3f"),
+        &record.args()
+    )
+}
 
 pub fn init() -> LoggerHandle {
     Logger::try_with_str("info")
@@ -14,6 +27,7 @@ pub fn init() -> LoggerHandle {
             Naming::Numbers,
             Cleanup::KeepLogFiles(7),
         )
+        .format(custom_format)
         .print_message()
         .create_symlink(".log/CURRENT")
         .write_mode(WriteMode::Async)
