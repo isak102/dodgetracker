@@ -26,7 +26,7 @@ pub async fn get_players_from_db(
         .map(|model| (model.summoner_id.clone(), model))
         .collect();
 
-    println!("DB query time taken: {:?}", time.elapsed());
+    println!("Apex tier DB query time taken: {:?}", time.elapsed());
 
     Ok(result)
 }
@@ -46,10 +46,14 @@ pub async fn get_players_from_api(
         .league_v4()
         .get_challenger_league(region, QueueType::RANKED_SOLO_5x5);
 
-    println!("API queries started for region: {}", region);
+    println!("Apex tiers API queries started for region: {}", region);
     let (master_result, grandmaster_result, challenger_result) =
         try_join!(master, grandmaster, challenger)?;
-    println!("API query time taken for {}: {:?}", region, time.elapsed());
+    println!(
+        "Apex tiers API query time taken for {}: {:?}",
+        region,
+        time.elapsed()
+    );
 
     let new_time = std::time::Instant::now();
 

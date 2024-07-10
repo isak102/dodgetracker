@@ -50,7 +50,6 @@ async fn run_region(region: PlatformRoute) -> Result<()> {
             .collect();
 
         let riot_ids = summoners::update_summoners(&summoner_ids, region, &txn).await?;
-        println!("First riot_id: {}", riot_ids[0]);
 
         riot_ids::update_riot_ids(&riot_ids, &txn).await?;
     }
