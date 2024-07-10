@@ -24,12 +24,12 @@ pub fn init() -> LoggerHandle {
         )
         .rotate(
             Criterion::Size(10 * 1024 * 1024),
-            Naming::Numbers,
-            Cleanup::KeepLogFiles(7),
+            Naming::Timestamps,
+            Cleanup::KeepLogFiles(10),
         )
         .format(custom_format)
         .print_message()
-        .create_symlink(".log/CURRENT")
+        .create_symlink("current_logfile")
         .write_mode(WriteMode::Async)
         .duplicate_to_stderr(flexi_logger::Duplicate::All)
         .start()
