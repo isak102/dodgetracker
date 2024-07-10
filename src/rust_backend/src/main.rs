@@ -10,6 +10,7 @@ mod config;
 mod db;
 mod dodges;
 mod entities;
+mod lolpros;
 mod riot_api;
 mod riot_ids;
 mod summoners;
