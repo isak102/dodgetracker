@@ -1,10 +1,7 @@
 extern crate dotenv;
 use anyhow::Result;
-use dotenv::from_path;
 use futures::future::try_join_all;
-use riven::{consts::PlatformRoute, RiotApi};
-use std::env;
-use std::sync::Arc;
+use riven::consts::PlatformRoute;
 
 mod db;
 mod dodges;

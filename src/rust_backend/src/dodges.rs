@@ -1,8 +1,10 @@
-use crate::entities::{apex_tier_players, dodges, sea_orm_active_enums::RankTier};
+use std::{collections::HashMap, time::Instant};
+
 use anyhow::Result;
 use riven::models::league_v4::LeagueItem;
 use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait};
-use std::{collections::HashMap, time::Instant};
+
+use crate::entities::{apex_tier_players, dodges, sea_orm_active_enums::RankTier};
 
 const DECAY_LP_LOSS: i32 = 75;
 

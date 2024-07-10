@@ -1,6 +1,7 @@
+use std::env;
+
 use dotenv::from_path;
 use sea_orm::{Database, DatabaseConnection};
-use std::env;
 use tokio::sync::OnceCell;
 
 static DB: OnceCell<DatabaseConnection> = OnceCell::const_new();

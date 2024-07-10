@@ -1,13 +1,15 @@
-use crate::entities::apex_tier_players;
-use crate::entities::sea_orm_active_enums::RankTier;
-use crate::riot_api::RIOT_API;
+use std::collections::HashMap;
+
 use anyhow::Result;
 use riven::consts::{PlatformRoute, QueueType};
 use riven::models::league_v4::LeagueItem;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::{ActiveValue, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
-use std::collections::HashMap;
 use tokio::try_join;
+
+use crate::entities::apex_tier_players;
+use crate::entities::sea_orm_active_enums::RankTier;
+use crate::riot_api::RIOT_API;
 
 pub async fn get_players_from_db(
     db: &DatabaseConnection,
