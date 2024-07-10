@@ -35,11 +35,11 @@ const SUPPORTED_REGIONS: [PlatformRoute; 5] = [
 lazy_static! {
     static ref THROTTLES: HashMap<PlatformRoute, i32> = {
         let mut m = HashMap::new();
-        m.insert(PlatformRoute::EUW1, 5);
-        m.insert(PlatformRoute::EUN1, 5);
-        m.insert(PlatformRoute::NA1, 10);
-        m.insert(PlatformRoute::KR, 10);
-        m.insert(PlatformRoute::OC1, 10);
+        m.insert(PlatformRoute::EUW1, 0);
+        m.insert(PlatformRoute::EUN1, 0);
+        m.insert(PlatformRoute::NA1, 0);
+        m.insert(PlatformRoute::KR, 0);
+        m.insert(PlatformRoute::OC1, 0);
         m
     };
 }
@@ -201,7 +201,7 @@ async fn run() -> Result<()> {
     }
 
     // Wait for all tasks to complete and collect the results
-    let results = try_join_all(tasks).await?;
+    let _results = try_join_all(tasks).await?;
 
     Ok(())
 }
