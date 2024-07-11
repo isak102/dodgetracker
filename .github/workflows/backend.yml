@@ -1,0 +1,36 @@
+name: Backend
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      # Change the working directory to src/backend
+      - name: Change directory to backend
+        run: cd src/backend
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Build
+        working-directory: src/backend
+        run: |
+          cargo build --release
+
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Run cargo fmt
+        working-directory: src/backend
+        run: cargo fmt -- --check
