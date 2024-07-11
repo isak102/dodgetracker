@@ -13,27 +13,17 @@ while getopts b flag; do
 done
 
 PROJECT_ROOT_DIR=$(realpath "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/../")
+BACKEND_DIR="$PROJECT_ROOT_DIR/src/backend"
 
-cd "$PROJECT_ROOT_DIR" || exit
-
-source .env
-
-export NVM_DIR="$HOME/.nvm"
-source "$NVM_DIR/nvm.sh" || {
-    echo "Failed to load nvm"
-    exit 1
-}
-nvm use || exit 1
+cd "$BACKEND_DIR" || exit
 
 echo "Building backend..."
-npx tsc -p src/backend/tsconfig.json
+cargo build --release
 echo "Build completed."
 
 if "$RUN"; then
     echo "Starting backend..."
-    while true; do
-        node src/backend/dist/backend/main.js
-    done
+    cargo run --release
     echo "Backend finished running."
 fi
 
