@@ -19,7 +19,7 @@ jobs:
       - name: Build
         working-directory: src/backend
         run: |
-          cargo build --release
+          cargo build
 
   fmt:
     runs-on: ubuntu-latest
@@ -30,6 +30,9 @@ jobs:
         with:
           toolchain: nightly
           override: true
+
+      - name: Install rustfmt
+        run: rustup component add rustfmt
 
       - name: Run cargo fmt
         working-directory: src/backend
