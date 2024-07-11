@@ -48,18 +48,18 @@ Due to limitations of the League of Legends API, Dodgetracker only tracks dodges
 ## Technologies Used
 
 - Typescript
+- Rust
+- MySQL
 - NextJS
 - TailwindCSS
-- MySQL
-- NodeJS (to run the self-hosted algorithm to detect dodges)
 - Drizzle ORM
-- Zod (type-safe schema validation for API calls, used in both frontend and backend)
+- Zod (type-safe schema validation for API calls)
 - Vercel
-- Analytics tools (GoogleAnalytics, Posthog, StatsPro, Google Search Console)
+- Analytics tools (GoogleAnalytics, Posthog, Google Search Console, StatsPro)
 
 ## Implementation
 
-The dodges are detected using an algorithm ([here](./src/backend/main.ts)) that runs 24/7 as a [Linux service](./src/backend/service/dodgetracker.service) on a self-hosted Ubuntu Server. In simple terms, this algorithm constantly checks the Master+ ladder using the League of Legends API, if a player loses LP without playing a game or [decaying](<https://leagueoflegends.fandom.com/wiki/Rank_(League_of_Legends)#Decay>) then a dodge is registered.
+The dodges are detected using an algorithm implemented in Rust ([here](./src/backend/src/main.rs)) that runs 24/7 as a [Linux service](./src/backend/service/dodgetracker.service) on a Ubuntu Server hosted on a Hetzner VPS. In simple terms, this algorithm constantly checks the Master+ ladder using the League of Legends API, if a player loses LP without playing a game or [decaying](<https://leagueoflegends.fandom.com/wiki/Rank_(League_of_Legends)#Decay>) then a dodge is registered. The MySQL database is hosted on the same Hetzner VPS, allowing for fast read/writes between the database and the algorithm due to their close proximity.
 
 The web-application is built using NextJS, TailwindCSS and Typescript ([here](./src/app/)) and is hosted on Vercel.
 
