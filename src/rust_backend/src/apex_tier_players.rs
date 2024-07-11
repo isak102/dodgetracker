@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::time::Duration;
 
 use anyhow::Result;
 use log::info;
@@ -12,6 +13,7 @@ use crate::config::INSERT_CHUNK_SIZE;
 use crate::entities::apex_tier_players;
 use crate::entities::sea_orm_active_enums::RankTier;
 use crate::riot_api::RIOT_API;
+use crate::util::with_timeout;
 
 pub async fn get_players_from_db(
     txn: &DatabaseTransaction,
@@ -47,20 +49,33 @@ pub async fn get_players_from_api(
 )> {
     let time = std::time::Instant::now();
 
-    let master = RIOT_API
-        .league_v4()
-        .get_master_league(region, QueueType::RANKED_SOLO_5x5);
-    let grandmaster = RIOT_API
-        .league_v4()
-        .get_grandmaster_league(region, QueueType::RANKED_SOLO_5x5);
-    let challenger = RIOT_API
-        .league_v4()
-        .get_challenger_league(region, QueueType::RANKED_SOLO_5x5);
+    let timeout = Duration::from_secs(10);
+    let master = with_timeout(
+        timeout,
+        RIOT_API
+            .league_v4()
+            .get_master_league(region, QueueType::RANKED_SOLO_5x5),
+    );
+    let grandmaster = with_timeout(
+        timeout,
+        RIOT_API
+            .league_v4()
+            .get_grandmaster_league(region, QueueType::RANKED_SOLO_5x5),
+    );
+    let challenger = with_timeout(
+        timeout,
+        RIOT_API
+            .league_v4()
+            .get_challenger_league(region, QueueType::RANKED_SOLO_5x5),
+    );
 
     info!("[{}]: Getting apex tier players from API...", region);
 
     let (master_result, grandmaster_result, challenger_result) =
         try_join!(master, grandmaster, challenger)?;
+    let master_result = master_result?;
+    let grandmaster_result = grandmaster_result?;
+    let challenger_result = challenger_result?;
 
     info!(
         "[{}]: Apex tiers API query time: {:?}",

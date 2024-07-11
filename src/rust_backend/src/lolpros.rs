@@ -1,11 +1,14 @@
+use std::time::Duration;
+
 use anyhow::Result;
-use log::{error, info};
+use futures::future::join_all;
+use log::{error, info, warn};
 use sea_orm::{sea_query::OnConflict, ActiveValue::Set, DatabaseTransaction, EntityTrait};
 use serde::Deserialize;
-use tokio::task;
+use tokio::spawn;
 use urlencoding::encode;
 
-use crate::{config::INSERT_CHUNK_SIZE, entities::riot_ids};
+use crate::{config::INSERT_CHUNK_SIZE, entities::riot_ids, util::with_timeout};
 
 #[derive(Deserialize, Debug)]
 struct LolprosProfile {
@@ -38,23 +41,30 @@ pub async fn upsert_lolpros_slugs(
     let futures = accounts.iter().map(|model| {
         let game_name = model.game_name.clone().unwrap();
         let tag_line = model.tag_line.clone().unwrap();
-        task::spawn(get_lolpros_slug(game_name, tag_line))
+        spawn(with_timeout(
+            Duration::from_secs(5),
+            get_lolpros_slug(game_name, tag_line),
+        ))
     });
 
-    let results: Vec<_> = futures::future::join_all(futures).await;
+    let results: Vec<_> = join_all(futures).await;
     info!("[EUW1]: Lolpros query time taken: {:?}.", t1.elapsed());
 
     let accounts_with_slug: Vec<riot_ids::ActiveModel> = accounts
         .iter()
         .zip(results)
         .filter_map(|(model, result)| match result.ok()? {
-            Ok(Some(slug)) => Some(riot_ids::ActiveModel {
+            Ok(Ok(Some(slug))) => Some(riot_ids::ActiveModel {
                 puuid: model.puuid.clone(),
                 lolpros_slug: Set(Some(slug)),
                 ..Default::default()
             }),
+            Ok(Err(e)) => {
+                warn!("[EUW1]: A lolpros API query failed: {}", e);
+                None
+            }
             Err(e) => {
-                error!("[EUW1]: A lolpros API query failed: {:?}", e);
+                warn!("[EUW1]: A lolpros API query timed out: {}", e);
                 None
             }
             _ => None,

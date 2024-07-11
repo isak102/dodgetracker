@@ -1,12 +1,16 @@
+use std::time::Duration;
+
 use anyhow::Result;
-use log::{info, warn};
+use futures::future::join_all;
+use log::{error, info, warn};
 use riven::consts::PlatformRoute;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::DatabaseTransaction;
 use sea_orm::{ActiveValue::Set, EntityTrait};
-use tokio::task;
+use tokio::spawn;
 
 use crate::config::INSERT_CHUNK_SIZE;
+use crate::util::with_timeout;
 use crate::{entities::riot_ids, riot_api::RIOT_API};
 
 pub async fn update_riot_ids(
@@ -23,20 +27,21 @@ pub async fn update_riot_ids(
     );
 
     let futures = puuids.iter().map(|puuid| {
-        task::spawn(
+        spawn(with_timeout(
+            Duration::from_secs(5),
             RIOT_API
                 .account_v1()
                 .get_by_puuid(riven::consts::RegionalRoute::EUROPE, puuid),
-        )
+        ))
     });
 
-    let results: Vec<_> = futures::future::join_all(futures).await;
+    let results: Vec<_> = join_all(futures).await;
     info!("[{}]: Got accounts from API in {:?}.", region, t1.elapsed());
 
     let riot_id_models: Vec<riot_ids::ActiveModel> = results
         .iter()
         .filter_map(|r| match r.as_ref().expect("Join failed") {
-            Ok(a) => {
+            Ok(Ok(a)) => {
                 if let (Some(game_name), Some(tag_line)) =
                     (a.game_name.as_ref(), a.tag_line.as_ref())
                 {
@@ -47,15 +52,22 @@ pub async fn update_riot_ids(
                         ..Default::default()
                     })
                 } else {
-                    warn!(
+                    error!(
                         "[{}]: Missing game_name or tag_line for puuid: {}",
                         region, a.puuid
                     );
                     None
                 }
             }
+            Ok(Err(e)) => {
+                error!(
+                    "[{}]: Error getting account info for a puuid: {}",
+                    region, e
+                );
+                None
+            }
             Err(e) => {
-                dbg!(e);
+                error!("[{}]: An account API query timed out: {}.", region, e);
                 None
             }
         })

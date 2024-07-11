@@ -1,11 +1,15 @@
+use std::time::Duration;
+
 use anyhow::Result;
-use log::{info, warn};
+use futures::future::join_all;
+use log::{error, info, warn};
 use riven::consts::PlatformRoute;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::DatabaseTransaction;
 use sea_orm::{ActiveValue::Set, EntityTrait};
-use tokio::task;
+use tokio::spawn;
 
+use crate::util::with_timeout;
 use crate::{
     config::INSERT_CHUNK_SIZE,
     entities::{self, summoners},
@@ -24,11 +28,14 @@ pub async fn update_summoners(
         summoner_ids.len()
     );
 
-    let futures = summoner_ids
-        .iter()
-        .map(|s_id| task::spawn(RIOT_API.summoner_v4().get_by_summoner_id(region, s_id)));
+    let futures = summoner_ids.iter().map(|s_id| {
+        spawn(with_timeout(
+            Duration::from_secs(10),
+            RIOT_API.summoner_v4().get_by_summoner_id(region, s_id),
+        ))
+    });
 
-    let results: Vec<_> = futures::future::join_all(futures).await;
+    let results: Vec<_> = join_all(futures).await;
 
     info!(
         "[{}]: Got summoners from API in {:?}.",
@@ -39,7 +46,7 @@ pub async fn update_summoners(
     let summoner_models: Vec<entities::summoners::ActiveModel> = results
         .iter()
         .filter_map(|r| match r.as_ref().expect("Join error failed") {
-            Ok(s) => Some(summoners::ActiveModel {
+            Ok(Ok(s)) => Some(summoners::ActiveModel {
                 puuid: Set(s.puuid.clone()),
                 summoner_id: Set(Some(s.id.clone())),
                 region: Set(region.to_string()),
@@ -48,8 +55,12 @@ pub async fn update_summoners(
                 summoner_level: Set(s.summoner_level),
                 ..Default::default()
             }),
-            Err(_) => {
-                warn!("[{}]: A summoner API query failed.", region);
+            Ok(Err(e)) => {
+                error!("[{}]: A summoner API query failed: {}", region, e);
+                None
+            }
+            Err(e) => {
+                error!("[{}]: A summoner API query timed out: {}", region, e);
                 None
             }
         })

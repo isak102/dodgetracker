@@ -2,6 +2,7 @@ extern crate dotenv;
 use std::collections::HashMap;
 
 use anyhow::Result;
+use futures::future::join_all;
 use futures::future::try_join_all;
 use lazy_static::lazy_static;
 use log::{error, info};
@@ -23,6 +24,7 @@ mod promotions_demotions;
 mod riot_api;
 mod riot_ids;
 mod summoners;
+mod util;
 
 const SUPPORTED_REGIONS: [PlatformRoute; 5] = [
     PlatformRoute::EUW1,
@@ -55,6 +57,7 @@ async fn sleep_thread(duration: Duration, region: PlatformRoute) {
     sleep(duration).await;
 }
 
+#[allow(unreachable_code)]
 async fn run_region(region: PlatformRoute) {
     info!("[{}]: Getting DB connection...", region);
     let db = db::get_db().await;
@@ -194,8 +197,6 @@ async fn run_region(region: PlatformRoute) {
             sleep(sleep_duration).await;
         }
     }
-
-    ()
 }
 
 async fn run() -> Result<()> {
@@ -206,7 +207,7 @@ async fn run() -> Result<()> {
     }
 
     // Wait for all tasks to complete and collect the results
-    let _results = try_join_all(tasks).await?;
+    let _results = join_all(tasks).await;
 
     Ok(())
 }
