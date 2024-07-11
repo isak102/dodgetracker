@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, time::Duration};
 
 use dotenv::from_path;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
@@ -11,11 +11,18 @@ pub async fn get_db() -> &'static DatabaseConnection {
         from_path("../../.env").ok();
         let db_url = env::var("BACKEND_DATABASE_URL").expect("DB URL not set");
 
-        Database::connect::<ConnectOptions>(
-            ConnectOptions::new(db_url).sqlx_logging(false).to_owned(),
-        )
-        .await
-        .unwrap()
+        let mut opt = ConnectOptions::new(db_url);
+        opt.max_connections(10) // Adjust this number based on your needs
+            .min_connections(5)
+            .connect_timeout(Duration::from_secs(30))
+            .acquire_timeout(Duration::from_secs(30))
+            .idle_timeout(Duration::from_secs(600))
+            .max_lifetime(Duration::from_secs(1800))
+            .sqlx_logging(false); // Enable SQLx logging for debugging if needed
+
+        Database::connect(opt)
+            .await
+            .expect("Failed to create database connection pool")
     })
     .await
 }
