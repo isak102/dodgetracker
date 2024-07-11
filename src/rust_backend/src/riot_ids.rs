@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use futures::future::join_all;
@@ -18,7 +18,7 @@ pub async fn update_riot_ids(
     region: PlatformRoute,
     txn: &DatabaseTransaction,
 ) -> Result<Vec<riot_ids::ActiveModel>> {
-    let t1 = std::time::Instant::now();
+    let t1 = Instant::now();
 
     info!(
         "[{}]: Getting account info from API for {} Riot IDs...",
@@ -73,7 +73,7 @@ pub async fn update_riot_ids(
         })
         .collect();
 
-    let t2 = std::time::Instant::now();
+    let t2 = Instant::now();
     info!(
         "[{}]: Inserting {} Riot IDs into DB...",
         region,

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use log::info;
@@ -19,7 +19,7 @@ pub async fn get_players_from_db(
     txn: &DatabaseTransaction,
     region: PlatformRoute,
 ) -> Result<HashMap<String, apex_tier_players::Model>> {
-    let time = std::time::Instant::now();
+    let t1 = Instant::now();
 
     info!("[{}]: Getting apex tier players from DB...", region);
 
@@ -35,7 +35,7 @@ pub async fn get_players_from_db(
         "[{}]: Got {} players from DB in {:?}.",
         region,
         result.len(),
-        time.elapsed()
+        t1.elapsed()
     );
 
     Ok(result)
@@ -47,7 +47,7 @@ pub async fn get_players_from_api(
     HashMap<String, (LeagueItem, RankTier)>,
     (usize, usize, usize),
 )> {
-    let time = std::time::Instant::now();
+    let t1 = Instant::now();
 
     let timeout = Duration::from_secs(10);
     let master = with_timeout(
@@ -80,10 +80,10 @@ pub async fn get_players_from_api(
     info!(
         "[{}]: Apex tiers API query time: {:?}",
         region,
-        time.elapsed()
+        t1.elapsed()
     );
 
-    let new_time = std::time::Instant::now();
+    let t2 = Instant::now();
 
     let (master_count, grandmaster_count, challenger_count) = (
         master_result.entries.len(),
@@ -112,7 +112,7 @@ pub async fn get_players_from_api(
     info!(
         "[{}]: API result processing time taken: {:?}",
         region,
-        new_time.elapsed()
+        t2.elapsed()
     );
 
     Ok((result, (master_count, grandmaster_count, challenger_count)))
@@ -123,7 +123,7 @@ pub async fn upsert_players(
     region: PlatformRoute,
     txn: &DatabaseTransaction,
 ) -> Result<()> {
-    let time = std::time::Instant::now();
+    let t1 = Instant::now();
 
     let player_models: Vec<apex_tier_players::ActiveModel> = players
         .values()
@@ -163,7 +163,7 @@ pub async fn upsert_players(
         "[{}]: Upserted {} players into DB in {:?}.",
         region,
         player_models.len(),
-        time.elapsed(),
+        t1.elapsed(),
     );
 
     Ok(())

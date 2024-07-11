@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use futures::future::join_all;
@@ -32,7 +32,7 @@ pub async fn upsert_lolpros_slugs(
     accounts: &[riot_ids::ActiveModel],
     txn: &DatabaseTransaction,
 ) -> Result<()> {
-    let t1 = std::time::Instant::now();
+    let t1 = Instant::now();
     info!(
         "[EUW1]: Starting lolpros query for {} accounts...",
         accounts.len()
@@ -71,7 +71,7 @@ pub async fn upsert_lolpros_slugs(
         })
         .collect();
 
-    let t2 = std::time::Instant::now();
+    let t2 = Instant::now();
     info!(
         "[EUW1]: Upserting {} lolpros slugs into DB...",
         accounts_with_slug.len()

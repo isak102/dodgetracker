@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Instant};
 
 use anyhow::Result;
 use log::info;
@@ -47,7 +47,7 @@ async fn get_demotions(
     region: PlatformRoute,
     txn: &DatabaseTransaction,
 ) -> Result<HashMap<String, Vec<ChronoDateTimeUtc>>> {
-    let time = std::time::Instant::now();
+    let t1 = Instant::now();
 
     let demotions: Vec<demotions::Model> = demotions::Entity::find()
         .filter(demotions::Column::Region.eq(region.to_string()))
@@ -70,7 +70,7 @@ async fn get_demotions(
         "[{}]: Got {} demotions from DB in {:?}.",
         region,
         result.len(),
-        time.elapsed()
+        t1.elapsed()
     );
 
     Ok(result)
@@ -84,7 +84,7 @@ pub async fn insert_promotions(
 ) -> Result<()> {
     let demotions = get_demotions(region, txn).await?;
 
-    let t1 = std::time::Instant::now();
+    let t1 = Instant::now();
     info!("[{}]: Finding promotions...", region);
 
     let promotions_models: Vec<promotions::ActiveModel> = api_players
@@ -135,7 +135,7 @@ pub async fn insert_demotions(
     let demotions = get_demotions(region, txn).await?;
     info!("[{}]: Finding new demotions...", region);
 
-    let t1 = std::time::Instant::now();
+    let t1 = Instant::now();
     let demotion_models: Vec<demotions::ActiveModel> = players_not_in_api
         .iter()
         .filter_map(|(summoner_id, player)| {

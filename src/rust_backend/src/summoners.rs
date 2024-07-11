@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use futures::future::join_all;
@@ -21,7 +21,7 @@ pub async fn update_summoners(
     region: PlatformRoute,
     txn: &DatabaseTransaction,
 ) -> Result<Vec<String>> {
-    let t1 = std::time::Instant::now();
+    let t1 = Instant::now();
     info!(
         "[{}]: Getting summoner info from API for {} summoners...",
         region,
@@ -66,7 +66,7 @@ pub async fn update_summoners(
         })
         .collect();
 
-    let t2 = std::time::Instant::now();
+    let t2 = Instant::now();
     info!(
         "[{}]: Upserting {} summoners into DB...",
         region,
