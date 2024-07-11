@@ -3,7 +3,7 @@ use std::{collections::HashMap, time::Instant};
 use anyhow::Result;
 use log::info;
 use riven::{consts::PlatformRoute, models::league_v4::LeagueItem};
-use sea_orm::{ActiveValue, DatabaseConnection, DatabaseTransaction, EntityTrait};
+use sea_orm::{ActiveValue, DatabaseTransaction, EntityTrait};
 
 use crate::entities::{apex_tier_players, dodges, sea_orm_active_enums::RankTier};
 

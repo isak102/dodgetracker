@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use futures::future::join_all;
-use log::{error, info, warn};
+use log::{error, info};
 use riven::consts::PlatformRoute;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::DatabaseTransaction;

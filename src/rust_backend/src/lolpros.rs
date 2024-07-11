@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use futures::future::join_all;
-use log::{error, info, warn};
+use log::{info, warn};
 use sea_orm::{sea_query::OnConflict, ActiveValue::Set, DatabaseTransaction, EntityTrait};
 use serde::Deserialize;
 use tokio::spawn;

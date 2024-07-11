@@ -3,7 +3,6 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use futures::future::join_all;
-use futures::future::try_join_all;
 use lazy_static::lazy_static;
 use log::{error, info};
 use riven::consts::PlatformRoute;
