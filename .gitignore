@@ -38,5 +38,4 @@ next-env.d.ts
 .env*
 .aws-sam
 .netlify
-src/backend/dist
 .logs
