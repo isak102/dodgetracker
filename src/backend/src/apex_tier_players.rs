@@ -2,8 +2,6 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
-use futures::future::try_join_all;
-use futures::FutureExt;
 use log::info;
 use riven::consts::{PlatformRoute, QueueType};
 use riven::models::league_v4::LeagueItem;
@@ -140,36 +138,27 @@ pub async fn upsert_players(
         })
         .collect();
 
-    info!(
-        "[{}]: Upserting {} players into DB...",
-        region,
-        player_models.len()
-    );
-    try_join_all(
-        player_models
-            .chunks(INSERT_CHUNK_SIZE)
-            .map(|chunk| {
-                apex_tier_players::Entity::insert_many(chunk.to_vec())
-                    .on_conflict(
-                        OnConflict::columns([
-                            apex_tier_players::Column::SummonerId,
-                            apex_tier_players::Column::Region,
-                        ])
-                        .update_columns([
-                            apex_tier_players::Column::RankTier,
-                            apex_tier_players::Column::Wins,
-                            apex_tier_players::Column::Losses,
-                            apex_tier_players::Column::CurrentLp,
-                            apex_tier_players::Column::UpdatedAt,
-                        ])
-                        .to_owned(),
-                    )
-                    .exec(txn)
-                    .boxed()
-            })
-            .collect::<Vec<_>>(),
-    )
-    .await?;
+    for chunk in player_models.chunks(INSERT_CHUNK_SIZE) {
+        info!("[{}]: Upserting {} players into DB...", region, chunk.len());
+        apex_tier_players::Entity::insert_many(chunk.to_vec())
+            .on_conflict(
+                OnConflict::columns([
+                    apex_tier_players::Column::SummonerId,
+                    apex_tier_players::Column::Region,
+                ])
+                .update_columns([
+                    apex_tier_players::Column::RankTier,
+                    apex_tier_players::Column::Wins,
+                    apex_tier_players::Column::Losses,
+                    apex_tier_players::Column::CurrentLp,
+                    apex_tier_players::Column::UpdatedAt,
+                ])
+                .to_owned(),
+            )
+            .exec(txn)
+            .await?;
+    }
+
     info!(
         "[{}]: Upserted {} players into DB in {:?}.",
         region,
