@@ -2,71 +2,61 @@ use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use futures::future::join_all;
-use log::{error, info};
-use riven::consts::PlatformRoute;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::DatabaseTransaction;
 use sea_orm::{ActiveValue::Set, EntityTrait};
+use tracing::{error, info, instrument};
 
 use crate::config::INSERT_CHUNK_SIZE;
 use crate::util::with_timeout;
 use crate::{entities::riot_ids, riot_api::RIOT_API};
 
+#[instrument(skip_all, fields(puuids = puuids.len()))]
 pub async fn update_riot_ids(
     puuids: &[String],
-    region: PlatformRoute,
     txn: &DatabaseTransaction,
 ) -> Result<Vec<riot_ids::ActiveModel>> {
     let t1 = Instant::now();
+    info!("Getting account infos from Riot API...",);
 
-    info!(
-        "[{}]: Getting account info from API for {} Riot IDs...",
-        region,
-        puuids.len()
-    );
-
-    let futures = puuids.iter().map(|puuid| {
+    let results = join_all(puuids.iter().map(|puuid| {
         with_timeout(
             Duration::from_secs(5),
             RIOT_API
                 .account_v1()
                 .get_by_puuid(riven::consts::RegionalRoute::EUROPE, puuid),
         )
-    });
+    }))
+    .await;
 
-    let results: Vec<_> = join_all(futures).await;
-    info!("[{}]: Got accounts from API in {:?}.", region, t1.elapsed());
+    info!(
+        perf = t1.elapsed().as_millis(),
+        metric = "accounts_api_query",
+        "Accounts API queries completed."
+    );
 
-    let riot_id_models: Vec<riot_ids::ActiveModel> = results
+    let riot_id_models: Vec<riot_ids::ActiveModel> = puuids
         .iter()
-        .filter_map(|r| match r.as_ref() {
+        .zip(results.iter())
+        .filter_map(|(puuid, result)| match result.as_ref() {
             Ok(Ok(a)) => {
-                if let (Some(game_name), Some(tag_line)) =
-                    (a.game_name.as_ref(), a.tag_line.as_ref())
-                {
-                    Some(riot_ids::ActiveModel {
-                        puuid: Set(a.puuid.clone()),
-                        game_name: Set(game_name.clone()),
-                        tag_line: Set(tag_line.clone()),
-                        ..Default::default()
-                    })
-                } else {
-                    error!(
-                        "[{}]: Missing game_name or tag_line for puuid: {}",
-                        region, a.puuid
-                    );
-                    None
+                if a.game_name.is_none() || a.tag_line.is_none() {
+                    error!(puuid, account = ?a, "Missing game_name or tag_line for puuid, skipping.");
+                    return None
                 }
+                Some(riot_ids::ActiveModel {
+                    puuid: Set(a.puuid.clone()),
+                    game_name: Set(a.game_name.clone().unwrap()),
+                    tag_line: Set(a.tag_line.clone().unwrap()),
+                    ..Default::default()
+                })
             }
             Ok(Err(e)) => {
-                error!(
-                    "[{}]: Error getting account info for a puuid: {}",
-                    region, e
-                );
+                error!(puuid, error = ?e, "An account API query failed.");
                 None
             }
             Err(e) => {
-                error!("[{}]: An account API query timed out: {}.", region, e);
+                error!(puuid, error = ?e, "An account API query timed out.");
                 None
             }
         })
@@ -74,9 +64,8 @@ pub async fn update_riot_ids(
 
     let t2 = Instant::now();
     info!(
-        "[{}]: Inserting {} Riot IDs into DB...",
-        region,
-        riot_id_models.len()
+        accounts = riot_id_models.len(),
+        "Upserting accounts into DB..."
     );
 
     for chunk in riot_id_models.chunks(INSERT_CHUNK_SIZE) {
@@ -95,10 +84,10 @@ pub async fn update_riot_ids(
     }
 
     info!(
-        "[{}]: Inserted {} Riot IDs into DB in {:?}.",
-        region,
-        riot_id_models.len(),
-        t2.elapsed()
+        perf = t2.elapsed().as_millis(),
+        accounts = riot_id_models.len(),
+        metric = "accounts_upserted",
+        "Upserted accounts into DB."
     );
 
     Ok(riot_id_models)

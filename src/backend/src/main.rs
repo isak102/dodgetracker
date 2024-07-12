@@ -114,7 +114,7 @@ async fn run_region(region: PlatformRoute) {
                 }
             };
 
-            let riot_id_models = match riot_ids::update_riot_ids(&riot_ids, region, &txn).await {
+            let riot_id_models = match riot_ids::update_riot_ids(&riot_ids, &txn).await {
                 Ok(res) => res,
                 Err(error) => {
                     error!(?error, "Error updating riot_ids table");
