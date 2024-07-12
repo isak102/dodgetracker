@@ -24,3 +24,4 @@ flexi_logger = { version = "0.28.5", features = ["async"] }
 log = "0.4.22"
 tracing = { version = "0.1.40", features = ["attributes"] }
 tracing-subscriber = "0.3.18"
+tracing-appender = "0.2.3"

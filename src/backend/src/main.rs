@@ -13,6 +13,7 @@ use tokio::time::sleep;
 use tokio::time::Duration;
 use tracing::instrument;
 use tracing::{error, info};
+use tracing_appender::rolling::Rotation;
 
 mod apex_tier_players;
 mod config;
@@ -205,11 +206,20 @@ async fn run() -> Result<()> {
 
 #[tokio::main]
 async fn main() {
-    let subscriber = tracing_subscriber::fmt()
+    let file_appender = tracing_appender::rolling::RollingFileAppender::builder()
+        .rotation(Rotation::DAILY)
+        .filename_suffix("dodgetracker.log")
+        .max_log_files(3)
+        .build(".log/")
+        .unwrap();
+
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+
+    // TODO: make the date format shorter, log to json aswell
+    tracing_subscriber::fmt()
         .with_target(false)
-        // .with_span_events(FmtSpan::CLOSE)
-        .finish();
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+        .with_writer(non_blocking)
+        .init();
 
     run().await.unwrap();
 }
