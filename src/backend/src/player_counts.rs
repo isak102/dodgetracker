@@ -1,10 +1,11 @@
 use anyhow::Result;
-use log::info;
 use riven::consts::PlatformRoute;
 use sea_orm::{
     prelude::ChronoDateTimeUtc, ActiveValue::Set, ColumnTrait, DatabaseTransaction, EntityTrait,
     QueryFilter, QueryOrder,
 };
+use tracing::info;
+use tracing::instrument;
 
 use crate::entities::{
     player_counts,
@@ -23,6 +24,7 @@ async fn get_latest_update_time(
         .map(|model| model.at_time))
 }
 
+#[instrument(skip_all, fields(m = master_count, gm = grandmaster_count, c = challenger_count))]
 pub async fn update_player_counts(
     master_count: usize,
     grandmaster_count: usize,
@@ -36,9 +38,8 @@ pub async fn update_player_counts(
         let time_diff = chrono::Utc::now() - latest_update_time;
         if time_diff < chrono::Duration::hours(1) {
             info!(
-                "[{}]: Skipping player counts update, last update was {}min ago.",
-                region,
-                time_diff.num_minutes()
+                last_update_diff = time_diff.num_minutes(),
+                "Skipping player counts update."
             );
             return Ok(());
         }
@@ -65,10 +66,7 @@ pub async fn update_player_counts(
         },
     ];
 
-    info!(
-        "[{}]: Updating player counts: [M: {}, GM: {}, C: {}]",
-        region, master_count, grandmaster_count, challenger_count
-    );
+    info!("Updating player counts");
 
     player_counts::Entity::insert_many(counts.to_vec())
         .exec(txn)

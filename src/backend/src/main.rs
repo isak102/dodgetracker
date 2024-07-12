@@ -50,8 +50,9 @@ lazy_static! {
 
 const RETRY_WAIT_SECS: u64 = 5;
 
+#[instrument(skip_all, fields(duration = duration.as_millis()))]
 async fn sleep_thread(duration: Duration) {
-    info!(duration = duration.as_millis(), "Sleeping...");
+    info!("Sleeping...");
     sleep(duration).await;
 }
 
@@ -184,8 +185,7 @@ async fn run_region(region: PlatformRoute) {
         if let Some(sleep_duration) =
             Duration::from_secs(THROTTLES[&region] as u64).checked_sub(t2.elapsed())
         {
-            info!(duration = sleep_duration.as_millis(), "Sleeping...");
-            sleep(sleep_duration).await;
+            sleep_thread(sleep_duration).await;
         }
     }
 }
