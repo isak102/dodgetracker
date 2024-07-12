@@ -7,7 +7,6 @@ use riven::consts::PlatformRoute;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::DatabaseTransaction;
 use sea_orm::{ActiveValue::Set, EntityTrait};
-use tokio::spawn;
 
 use crate::util::with_timeout;
 use crate::{
@@ -28,14 +27,13 @@ pub async fn update_summoners(
         summoner_ids.len()
     );
 
-    let futures = summoner_ids.iter().map(|s_id| {
-        spawn(with_timeout(
+    let results = join_all(summoner_ids.iter().map(|s_id| {
+        with_timeout(
             Duration::from_secs(10),
             RIOT_API.summoner_v4().get_by_summoner_id(region, s_id),
-        ))
-    });
-
-    let results: Vec<_> = join_all(futures).await;
+        )
+    }))
+    .await;
 
     info!(
         "[{}]: Got summoners from API in {:?}.",
@@ -45,7 +43,7 @@ pub async fn update_summoners(
 
     let summoner_models: Vec<entities::summoners::ActiveModel> = results
         .iter()
-        .filter_map(|r| match r.as_ref().expect("Join error failed") {
+        .filter_map(|r| match r.as_ref() {
             Ok(Ok(s)) => Some(summoners::ActiveModel {
                 puuid: Set(s.puuid.clone()),
                 summoner_id: Set(Some(s.id.clone())),
