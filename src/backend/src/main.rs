@@ -94,7 +94,7 @@ async fn run_region(region: PlatformRoute) {
             }
         };
 
-        let dodges = dodges::find_dodges(&db_players, &api_players, region).await;
+        let dodges = dodges::find_dodges(&db_players, &api_players).await;
 
         if !dodges.is_empty() {
             let summoner_ids: Vec<&str> = dodges
@@ -127,7 +127,7 @@ async fn run_region(region: PlatformRoute) {
                 error!(?error, "Error upserting Lolpros slugs. Ignoring.");
             }
 
-            if let Err(error) = dodges::insert_dodges(&dodges, &txn, region).await {
+            if let Err(error) = dodges::insert_dodges(&dodges, &txn).await {
                 error!(?error, "Error inserting dodges");
                 sleep_thread(Duration::from_secs(RETRY_WAIT_SECS)).await;
                 continue;
