@@ -1,13 +1,13 @@
 use std::{collections::HashMap, time::Instant};
 
 use anyhow::Result;
-use log::info;
 use riven::{consts::PlatformRoute, models::league_v4::LeagueItem};
 use sea_orm::{
     prelude::{ChronoDateTimeUtc, DateTimeUtc},
     ActiveValue::Set,
     ColumnTrait, DatabaseTransaction, EntityTrait, QueryFilter,
 };
+use tracing::{info, instrument};
 
 use crate::{
     config::INSERT_CHUNK_SIZE,
@@ -43,18 +43,18 @@ fn has_demoted(
 }
 
 // TODO: only execute this once and pass it down
+#[instrument(skip_all)]
 async fn get_demotions(
     region: PlatformRoute,
     txn: &DatabaseTransaction,
 ) -> Result<HashMap<String, Vec<ChronoDateTimeUtc>>> {
     let t1 = Instant::now();
 
+    info!("Getting demotions from DB...");
     let demotions: Vec<demotions::Model> = demotions::Entity::find()
         .filter(demotions::Column::Region.eq(region.to_string()))
         .all(txn)
         .await?;
-
-    info!("[{}]: Getting demotions from DB...", region);
 
     let result = demotions.into_iter().fold(
         HashMap::new(),
@@ -67,15 +67,16 @@ async fn get_demotions(
     );
 
     info!(
-        "[{}]: Got {} demotions from DB in {:?}.",
-        region,
-        result.len(),
-        t1.elapsed()
+        perf = t1.elapsed().as_millis(),
+        demotions = result.len(),
+        metric = "demotion_db_query",
+        "Got demotions from DB."
     );
 
     Ok(result)
 }
 
+#[instrument(skip_all, fields(api_players = api_players.len(), db_players = db_players.len()))]
 pub async fn insert_promotions(
     api_players: &HashMap<String, (LeagueItem, RankTier)>,
     db_players: &HashMap<String, apex_tier_players::Model>,
@@ -85,7 +86,7 @@ pub async fn insert_promotions(
     let demotions = get_demotions(region, txn).await?;
 
     let t1 = Instant::now();
-    info!("[{}]: Finding promotions...", region);
+    info!("Finding promotions...");
 
     let promotions_models: Vec<promotions::ActiveModel> = api_players
         .iter()
@@ -105,10 +106,10 @@ pub async fn insert_promotions(
         .collect();
 
     info!(
-        "[{}]: Found {} promotions in {:?}.",
-        region,
-        promotions_models.len(),
-        t1.elapsed()
+        perf = t1.elapsed().as_millis(),
+        promotions = promotions_models.len(),
+        metric = "promotion_detection",
+        "Found promotions."
     );
 
     for chunk in promotions_models.chunks(INSERT_CHUNK_SIZE) {
@@ -116,26 +117,36 @@ pub async fn insert_promotions(
             .exec(txn)
             .await?;
     }
-
     Ok(())
 }
 
+#[instrument(skip_all, fields(api_players = api_players.len(), db_players = db_players.len()))]
 pub async fn insert_demotions(
     api_players: &HashMap<String, (LeagueItem, RankTier)>,
     db_players: &HashMap<String, apex_tier_players::Model>,
     region: PlatformRoute,
     txn: &DatabaseTransaction,
 ) -> Result<()> {
+    let t1 = Instant::now();
+    info!("Finding players not in API...");
+
     let players_not_in_api: HashMap<String, apex_tier_players::Model> = db_players
         .iter()
         .filter(|(summoner_id, _)| !api_players.contains_key(*summoner_id))
         .map(|(summoner_id, player)| (summoner_id.clone(), player.clone()))
         .collect();
 
-    let demotions = get_demotions(region, txn).await?;
-    info!("[{}]: Finding new demotions...", region);
+    info!(
+        perf = t1.elapsed().as_millis(),
+        players = players_not_in_api.len(),
+        metric = "players_not_in_api",
+        "Found players not in API."
+    );
 
-    let t1 = Instant::now();
+    let demotions = get_demotions(region, txn).await?;
+    info!("Detecting demotions...");
+
+    let t2 = Instant::now();
     let demotion_models: Vec<demotions::ActiveModel> = players_not_in_api
         .iter()
         .filter_map(|(summoner_id, player)| {
@@ -156,10 +167,10 @@ pub async fn insert_demotions(
         .collect();
 
     info!(
-        "[{}]: Found {} demotions in {:?}.",
-        region,
-        demotion_models.len(),
-        t1.elapsed()
+        perf = t2.elapsed().as_millis(),
+        demotions = demotion_models.len(),
+        metric = "demotion_detection",
+        "Detected demotions."
     );
 
     for chunk in demotion_models.chunks(INSERT_CHUNK_SIZE) {
