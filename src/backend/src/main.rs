@@ -5,13 +5,14 @@ use std::time::Instant;
 use anyhow::Result;
 use futures::future::join_all;
 use lazy_static::lazy_static;
-use log::{error, info};
 use riven::consts::PlatformRoute;
 use sea_orm::ActiveValue::Set;
 use sea_orm::TransactionTrait;
 use tokio::spawn;
 use tokio::time::sleep;
 use tokio::time::Duration;
+use tracing::instrument;
+use tracing::{error, info};
 
 mod apex_tier_players;
 mod config;
@@ -49,29 +50,26 @@ lazy_static! {
 
 const RETRY_WAIT_SECS: u64 = 5;
 
-async fn sleep_thread(duration: Duration, region: PlatformRoute) {
-    info!(
-        "[{}]: Sleeping for {} seconds...",
-        region,
-        duration.as_secs()
-    );
+async fn sleep_thread(duration: Duration) {
+    info!(duration = duration.as_millis(), "Sleeping...");
     sleep(duration).await;
 }
 
 #[allow(unreachable_code)]
+#[instrument(name = "run")]
 async fn run_region(region: PlatformRoute) {
-    info!("[{}]: Getting DB connection...", region);
+    info!("Getting DB connection...");
     let db = db::get_db().await;
 
     loop {
         let t1 = Instant::now();
 
-        info!("[{}]: Starting transaction...", region);
+        info!("Starting transaction...");
         let txn = match db.begin().await {
             Ok(txn) => txn,
             Err(e) => {
-                error!("[{}]: Failed to start transaction: {}", region, e);
-                sleep_thread(Duration::from_secs(RETRY_WAIT_SECS), region).await;
+                error!(?e, "Failed to start transaction");
+                sleep_thread(Duration::from_secs(RETRY_WAIT_SECS)).await;
                 continue;
             }
         };
@@ -80,18 +78,18 @@ async fn run_region(region: PlatformRoute) {
         let (api_players, (master_count, grandmaster_count, challenger_count)) =
             match apex_tier_players::get_players_from_api(region).await {
                 Ok(r) => r,
-                Err(e) => {
-                    error!("[{}]: Error getting players from Riot API: {}", region, e);
-                    sleep_thread(Duration::from_secs(RETRY_WAIT_SECS), region).await;
+                Err(error) => {
+                    error!(?error, "Error getting players from the League API.");
+                    sleep_thread(Duration::from_secs(RETRY_WAIT_SECS)).await;
                     continue;
                 }
             };
 
         let db_players = match apex_tier_players::get_players_from_db(&txn, region).await {
             Ok(res) => res,
-            Err(e) => {
-                error!("[{}]: Error getting players from DB: {}", region, e);
-                sleep_thread(Duration::from_secs(RETRY_WAIT_SECS), region).await;
+            Err(error) => {
+                error!(?error, "Error getting players from DB.");
+                sleep_thread(Duration::from_secs(RETRY_WAIT_SECS)).await;
                 continue;
             }
         };
@@ -109,58 +107,55 @@ async fn run_region(region: PlatformRoute) {
 
             let riot_ids = match summoners::update_summoners(&summoner_ids, region, &txn).await {
                 Ok(res) => res,
-                Err(e) => {
-                    error!("[{}]: Error updating summoners table: {}", region, e);
-                    sleep_thread(Duration::from_secs(RETRY_WAIT_SECS), region).await;
+                Err(error) => {
+                    error!(?error, "Error updating summoners table");
+                    sleep_thread(Duration::from_secs(RETRY_WAIT_SECS)).await;
                     continue;
                 }
             };
 
             let riot_id_models = match riot_ids::update_riot_ids(&riot_ids, region, &txn).await {
                 Ok(res) => res,
-                Err(e) => {
-                    error!("[{}]: Error updating riot_ids table: {}", region, e);
-                    sleep_thread(Duration::from_secs(RETRY_WAIT_SECS), region).await;
+                Err(error) => {
+                    error!(?error, "Error updating riot_ids table");
+                    sleep_thread(Duration::from_secs(RETRY_WAIT_SECS)).await;
                     continue;
                 }
             };
 
-            if let Err(e) = lolpros::upsert_lolpros_slugs(&riot_id_models, &txn).await {
-                error!(
-                    "[{}]: Error upserting Lolpros slugs: {}. Ignoring.",
-                    region, e
-                );
+            if let Err(error) = lolpros::upsert_lolpros_slugs(&riot_id_models, &txn).await {
+                error!(?error, "Error upserting Lolpros slugs. Ignoring.");
             }
 
-            if let Err(e) = dodges::insert_dodges(&dodges, &txn, region).await {
-                error!("[{}]: Error inserting dodges: {}", region, e);
-                sleep_thread(Duration::from_secs(RETRY_WAIT_SECS), region).await;
+            if let Err(error) = dodges::insert_dodges(&dodges, &txn, region).await {
+                error!(?error, "Error inserting dodges");
+                sleep_thread(Duration::from_secs(RETRY_WAIT_SECS)).await;
                 continue;
             }
         }
 
-        if let Err(e) = apex_tier_players::upsert_players(&api_players, region, &txn).await {
-            error!("[{}]: Error upserting players: {}", region, e);
-            sleep_thread(Duration::from_secs(RETRY_WAIT_SECS), region).await;
+        if let Err(error) = apex_tier_players::upsert_players(&api_players, region, &txn).await {
+            error!(?error, "Error upserting players");
+            sleep_thread(Duration::from_secs(RETRY_WAIT_SECS)).await;
             continue;
         }
 
-        if let Err(e) =
+        if let Err(error) =
             promotions_demotions::insert_promotions(&api_players, &db_players, region, &txn).await
         {
-            error!("[{}]: Error inserting promotions: {}", region, e);
-            sleep_thread(Duration::from_secs(RETRY_WAIT_SECS), region).await;
+            error!(?error, "Error inserting promotions");
+            sleep_thread(Duration::from_secs(RETRY_WAIT_SECS)).await;
             continue;
         }
-        if let Err(e) =
+        if let Err(error) =
             promotions_demotions::insert_demotions(&api_players, &db_players, region, &txn).await
         {
-            error!("[{}]: Error inserting demotions: {}", region, e);
-            sleep_thread(Duration::from_secs(RETRY_WAIT_SECS), region).await;
+            error!(?error, "Error inserting demotions");
+            sleep_thread(Duration::from_secs(RETRY_WAIT_SECS)).await;
             continue;
         }
 
-        if let Err(e) = player_counts::update_player_counts(
+        if let Err(error) = player_counts::update_player_counts(
             master_count,
             grandmaster_count,
             challenger_count,
@@ -169,32 +164,25 @@ async fn run_region(region: PlatformRoute) {
         )
         .await
         {
-            error!(
-                "[{}]: Error updating player counts: {}. Ignoring.",
-                region, e
-            );
+            error!(?error, "Error updating player counts. Ignoring.");
         }
 
-        info!("[{}]: Committing transaction...", region);
-        if let Err(e) = txn.commit().await {
-            error!("[{}]: Failed to commit transaction: {:?}", region, e);
-            sleep_thread(Duration::from_secs(RETRY_WAIT_SECS), region).await;
+        info!("Committing transaction...");
+        if let Err(error) = txn.commit().await {
+            error!(?error, "Failed to commit transaction.");
+            sleep_thread(Duration::from_secs(RETRY_WAIT_SECS)).await;
             continue;
         }
         info!(
-            "[{}]: PERFORMANCE: Region update took {:?}.",
-            region,
-            t1.elapsed()
+            metric = "region_update",
+            perf = t1.elapsed().as_millis(),
+            "Region update complete.",
         );
 
         if let Some(sleep_duration) =
             Duration::from_secs(THROTTLES[&region] as u64).checked_sub(t2.elapsed())
         {
-            info!(
-                "[{}]: Sleeping for {} seconds...",
-                region,
-                sleep_duration.as_secs_f32()
-            );
+            info!(duration = sleep_duration.as_millis(), "Sleeping...");
             sleep(sleep_duration).await;
         }
     }
@@ -215,6 +203,11 @@ async fn run() -> Result<()> {
 
 #[tokio::main]
 async fn main() {
-    let _logger = logger::init();
+    let subscriber = tracing_subscriber::fmt()
+        .with_target(false)
+        // .with_span_events(FmtSpan::CLOSE)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).unwrap();
+
     run().await.unwrap();
 }
