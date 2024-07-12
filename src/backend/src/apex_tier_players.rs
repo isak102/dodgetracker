@@ -2,12 +2,13 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
-use log::info;
 use riven::consts::{PlatformRoute, QueueType};
 use riven::models::league_v4::LeagueItem;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::{ActiveValue, ColumnTrait, DatabaseTransaction, EntityTrait, QueryFilter};
 use tokio::try_join;
+use tracing::info;
+use tracing::instrument;
 
 use crate::config::INSERT_CHUNK_SIZE;
 use crate::entities::apex_tier_players;
@@ -15,13 +16,14 @@ use crate::entities::sea_orm_active_enums::RankTier;
 use crate::riot_api::RIOT_API;
 use crate::util::with_timeout;
 
+#[instrument(skip_all)]
 pub async fn get_players_from_db(
     txn: &DatabaseTransaction,
     region: PlatformRoute,
 ) -> Result<HashMap<String, apex_tier_players::Model>> {
     let t1 = Instant::now();
 
-    info!("[{}]: Getting apex tier players from DB...", region);
+    info!("Getting apex tier players from DB...");
 
     let result: HashMap<String, apex_tier_players::Model> = apex_tier_players::Entity::find()
         .filter(apex_tier_players::Column::Region.eq(region.to_string()))
@@ -32,15 +34,16 @@ pub async fn get_players_from_db(
         .collect();
 
     info!(
-        "[{}]: Got {} players from DB in {:?}.",
-        region,
-        result.len(),
-        t1.elapsed()
+        perf = t1.elapsed().as_millis(),
+        players = result.len(),
+        metric = "apex_db_query",
+        "Got apex tier players from DB."
     );
 
     Ok(result)
 }
 
+#[instrument(name = "apex_api", skip(region))]
 pub async fn get_players_from_api(
     region: PlatformRoute,
 ) -> Result<(
@@ -69,7 +72,7 @@ pub async fn get_players_from_api(
             .get_challenger_league(region, QueueType::RANKED_SOLO_5x5),
     );
 
-    info!("[{}]: Getting apex tier players from API...", region);
+    info!("Getting apex tier players from API...");
 
     let (master_result, grandmaster_result, challenger_result) =
         try_join!(master, grandmaster, challenger)?;
@@ -78,9 +81,9 @@ pub async fn get_players_from_api(
     let challenger_result = challenger_result?;
 
     info!(
-        "[{}]: Apex tiers API query time: {:?}",
-        region,
-        t1.elapsed()
+        perf = t1.elapsed().as_millis(),
+        metric = "apex_api_query",
+        "Apex tier API queries finished.",
     );
 
     let t2 = Instant::now();
@@ -110,14 +113,16 @@ pub async fn get_players_from_api(
         .collect();
 
     info!(
-        "[{}]: API result processing time taken: {:?}",
-        region,
-        t2.elapsed()
+        perf = t2.elapsed().as_millis(),
+        players = result.len(),
+        metric = "apex_api_processed",
+        "Apex tier API results processed."
     );
 
     Ok((result, (master_count, grandmaster_count, challenger_count)))
 }
 
+#[instrument(skip_all, fields(players = players.len()))]
 pub async fn upsert_players(
     players: &HashMap<String, (LeagueItem, RankTier)>,
     region: PlatformRoute,
@@ -139,7 +144,6 @@ pub async fn upsert_players(
         .collect();
 
     for chunk in player_models.chunks(INSERT_CHUNK_SIZE) {
-        info!("[{}]: Upserting {} players into DB...", region, chunk.len());
         apex_tier_players::Entity::insert_many(chunk.to_vec())
             .on_conflict(
                 OnConflict::columns([
@@ -160,10 +164,10 @@ pub async fn upsert_players(
     }
 
     info!(
-        "[{}]: Upserted {} players into DB in {:?}.",
-        region,
-        player_models.len(),
-        t1.elapsed(),
+        perf = t1.elapsed().as_millis(),
+        players = player_models.len(),
+        metric = "apex_db_upsert",
+        "Upserted apex tier players into DB."
     );
 
     Ok(())
