@@ -36,29 +36,25 @@ fn has_demoted(
 ) -> bool {
     match player_demotions {
         None => true,
-        Some(demotions) => demotions
+        Some(demotions) => !demotions
             .iter()
-            .all(|demotion| demotion <= &player.updated_at),
+            .any(|demotion| demotion > &player.updated_at),
     }
 }
 
-async fn get_demotions_for_summoners(
-    summoner_ids: Vec<String>,
+// TODO: only execute this once and pass it down
+async fn get_demotions(
     region: PlatformRoute,
     txn: &DatabaseTransaction,
 ) -> Result<HashMap<String, Vec<ChronoDateTimeUtc>>> {
-    info!(
-        "[{}]: Getting demotions for {} summoners from DB...",
-        region,
-        summoner_ids.len()
-    );
     let t1 = Instant::now();
 
     let demotions: Vec<demotions::Model> = demotions::Entity::find()
         .filter(demotions::Column::Region.eq(region.to_string()))
-        .filter(demotions::Column::SummonerId.is_in(summoner_ids))
         .all(txn)
         .await?;
+
+    info!("[{}]: Getting demotions from DB...", region);
 
     let result = demotions.into_iter().fold(
         HashMap::new(),
@@ -71,7 +67,7 @@ async fn get_demotions_for_summoners(
     );
 
     info!(
-        "[{}]: Got demotions for {} summoners from DB in {:?}.",
+        "[{}]: Got {} demotions from DB in {:?}.",
         region,
         result.len(),
         t1.elapsed()
@@ -86,12 +82,7 @@ pub async fn insert_promotions(
     region: PlatformRoute,
     txn: &DatabaseTransaction,
 ) -> Result<()> {
-    let players_in_db_and_api: Vec<String> = db_players
-        .keys()
-        .filter(|summoner_id| api_players.contains_key(*summoner_id))
-        .cloned()
-        .collect();
-    let demotions = get_demotions_for_summoners(players_in_db_and_api, region, txn).await?;
+    let demotions = get_demotions(region, txn).await?;
 
     let t1 = Instant::now();
     info!("[{}]: Finding promotions...", region);
@@ -141,20 +132,14 @@ pub async fn insert_demotions(
         .map(|(summoner_id, player)| (summoner_id.clone(), player.clone()))
         .collect();
 
-    let demotions_for_summoners = get_demotions_for_summoners(
-        players_not_in_api.keys().cloned().collect::<Vec<String>>(),
-        region,
-        txn,
-    )
-    .await?;
-
+    let demotions = get_demotions(region, txn).await?;
     info!("[{}]: Finding new demotions...", region);
 
     let t1 = Instant::now();
     let demotion_models: Vec<demotions::ActiveModel> = players_not_in_api
         .iter()
         .filter_map(|(summoner_id, player)| {
-            let player_demotions = demotions_for_summoners.get(summoner_id);
+            let player_demotions = demotions.get(summoner_id);
 
             if has_demoted(player, player_demotions) {
                 Some(demotions::ActiveModel {
