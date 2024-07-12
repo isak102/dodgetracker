@@ -2,9 +2,9 @@ use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use futures::future::join_all;
-use log::{info, warn};
 use sea_orm::{sea_query::OnConflict, ActiveValue::Set, DatabaseTransaction, EntityTrait};
 use serde::Deserialize;
+use tracing::{info, instrument, warn};
 use urlencoding::encode;
 
 use crate::{config::INSERT_CHUNK_SIZE, entities::riot_ids, util::with_timeout};
@@ -27,27 +27,30 @@ async fn get_lolpros_slug(game_name: String, tag_line: String) -> Result<Option<
     }
 }
 
+#[instrument(skip(accounts, txn), fields(accounts = accounts.len()))]
 pub async fn upsert_lolpros_slugs(
     accounts: &[riot_ids::ActiveModel],
     txn: &DatabaseTransaction,
 ) -> Result<()> {
     let t1 = Instant::now();
-    info!(
-        "[EUW1]: Starting lolpros query for {} accounts...",
-        accounts.len()
-    );
+    info!("Starting lolpros queries...");
 
-    let futures = accounts.iter().map(|model| {
+    let results: Vec<_> = join_all(accounts.iter().map(|model| {
         let game_name = model.game_name.clone().unwrap();
         let tag_line = model.tag_line.clone().unwrap();
         with_timeout(
             Duration::from_secs(5),
             get_lolpros_slug(game_name, tag_line),
         )
-    });
+    }))
+    .await;
 
-    let results: Vec<_> = join_all(futures).await;
-    info!("[EUW1]: Lolpros query time taken: {:?}.", t1.elapsed());
+    info!(
+        perf = t1.elapsed().as_millis(),
+        queries = results.len(),
+        metric = "lolpros_api_query",
+        "Lolpros API queries completed."
+    );
 
     let accounts_with_slug: Vec<riot_ids::ActiveModel> = accounts
         .iter()
@@ -59,21 +62,37 @@ pub async fn upsert_lolpros_slugs(
                 ..Default::default()
             }),
             Ok(Err(e)) => {
-                warn!("[EUW1]: A lolpros API query failed: {}", e);
+                warn!(
+                    game_name = model.game_name.clone().unwrap(),
+                    tag_line = model.game_name.clone().unwrap(),
+                    puuid = model.puuid.clone().unwrap(),
+                    error = ?e,
+                    "Lolpros API query failed. Ignoring.",
+                );
                 None
             }
             Err(e) => {
-                warn!("[EUW1]: A lolpros API query timed out: {}", e);
+                warn!(
+                    game_name = model.game_name.clone().unwrap(),
+                    tag_line = model.game_name.clone().unwrap(),
+                    puuid = model.puuid.clone().unwrap(),
+                    error = ?e,
+                    "Lolpros API query timed out. Ignoring.",
+                );
                 None
             }
             _ => None,
         })
         .collect();
 
+    if accounts_with_slug.is_empty() {
+        return Ok(());
+    }
+
     let t2 = Instant::now();
     info!(
-        "[EUW1]: Upserting {} lolpros slugs into DB...",
-        accounts_with_slug.len()
+        slugs = accounts_with_slug.len(),
+        "Upserting lolpros slugs into DB...",
     );
 
     for chunk in accounts_with_slug.chunks(INSERT_CHUNK_SIZE) {
@@ -88,9 +107,10 @@ pub async fn upsert_lolpros_slugs(
     }
 
     info!(
-        "[EUW1]: Upserted {} lolpros slugs into DB in {:?}.",
-        accounts_with_slug.len(),
-        t2.elapsed()
+        perf = t2.elapsed().as_millis(),
+        slugs = accounts_with_slug.len(),
+        metric = "lolpros_db_upsert",
+        "Upserted lolpros slugs into DB."
     );
     Ok(())
 }

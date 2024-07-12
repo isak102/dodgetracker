@@ -123,8 +123,10 @@ async fn run_region(region: PlatformRoute) {
                 }
             };
 
-            if let Err(error) = lolpros::upsert_lolpros_slugs(&riot_id_models, &txn).await {
-                error!(?error, "Error upserting Lolpros slugs. Ignoring.");
+            if region == PlatformRoute::EUW1 {
+                if let Err(error) = lolpros::upsert_lolpros_slugs(&riot_id_models, &txn).await {
+                    error!(?error, "Error upserting Lolpros slugs. Ignoring.");
+                }
             }
 
             if let Err(error) = dodges::insert_dodges(&dodges, &txn).await {
