@@ -2,11 +2,11 @@ use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use futures::future::join_all;
-use log::{error, info};
 use riven::consts::PlatformRoute;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::DatabaseTransaction;
 use sea_orm::{ActiveValue::Set, EntityTrait};
+use tracing::{error, info, instrument};
 
 use crate::util::with_timeout;
 use crate::{
@@ -15,17 +15,14 @@ use crate::{
     riot_api::RIOT_API,
 };
 
-pub async fn update_summoners(
+#[instrument(skip_all, fields(summoners = summoner_ids.len()))]
+pub async fn upsert_summoners(
     summoner_ids: &[&str],
     region: PlatformRoute,
     txn: &DatabaseTransaction,
 ) -> Result<Vec<String>> {
     let t1 = Instant::now();
-    info!(
-        "[{}]: Getting summoner info from API for {} summoners...",
-        region,
-        summoner_ids.len()
-    );
+    info!("Getting summoner info from league API for summoners...");
 
     let results = join_all(summoner_ids.iter().map(|s_id| {
         with_timeout(
@@ -36,9 +33,10 @@ pub async fn update_summoners(
     .await;
 
     info!(
-        "[{}]: Got summoners from API in {:?}.",
-        region,
-        t1.elapsed()
+        perf = t1.elapsed().as_millis(),
+        summoners = results.len(),
+        metric = "summoner_api_query",
+        "Got summoners from API."
     );
 
     let summoner_models: Vec<entities::summoners::ActiveModel> = results
@@ -54,11 +52,11 @@ pub async fn update_summoners(
                 ..Default::default()
             }),
             Ok(Err(e)) => {
-                error!("[{}]: A summoner API query failed: {}", region, e);
+                error!(error = ?e, "A summoner API query failed");
                 None
             }
             Err(e) => {
-                error!("[{}]: A summoner API query timed out: {}", region, e);
+                error!(error = ?e, "A summoner API query timed out");
                 None
             }
         })
@@ -66,9 +64,8 @@ pub async fn update_summoners(
 
     let t2 = Instant::now();
     info!(
-        "[{}]: Upserting {} summoners into DB...",
-        region,
-        summoner_models.len()
+        summoners = summoner_models.len(),
+        "Upserting summoners into DB...",
     );
 
     for chunk in summoner_models.chunks(INSERT_CHUNK_SIZE) {
@@ -90,10 +87,10 @@ pub async fn update_summoners(
     }
 
     info!(
-        "[{}]: Upserted {} summoners into DB in {:?}.",
-        region,
-        summoner_models.len(),
-        t2.elapsed()
+        perf = t2.elapsed().as_millis(),
+        summoners = summoner_models.len(),
+        metric = "summoners_upsert",
+        "Upserted summoners into DB."
     );
 
     Ok(summoner_models

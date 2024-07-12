@@ -105,7 +105,7 @@ async fn run_region(region: PlatformRoute) {
                 })
                 .collect();
 
-            let riot_ids = match summoners::update_summoners(&summoner_ids, region, &txn).await {
+            let riot_ids = match summoners::upsert_summoners(&summoner_ids, region, &txn).await {
                 Ok(res) => res,
                 Err(error) => {
                     error!(?error, "Error updating summoners table");
@@ -174,8 +174,8 @@ async fn run_region(region: PlatformRoute) {
             continue;
         }
         info!(
-            metric = "region_update",
             perf = t1.elapsed().as_millis(),
+            metric = "region_update",
             "Region update complete.",
         );
 
