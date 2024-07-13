@@ -1,37 +1,50 @@
-use std::io::Write;
+use tracing::level_filters::LevelFilter;
+use tracing_appender::{
+    non_blocking::WorkerGuard,
+    rolling::{RollingFileAppender, Rotation},
+};
+use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
-use flexi_logger::{Cleanup, Criterion, DeferredNow, Logger, LoggerHandle, Naming, WriteMode};
-use log::Record;
+pub fn init() -> (WorkerGuard, WorkerGuard) {
+    let file_appender = RollingFileAppender::builder()
+        .rotation(Rotation::DAILY)
+        .filename_prefix("dodgetracker-log")
+        .filename_suffix("log")
+        .max_log_files(3)
+        .build(".log/")
+        .unwrap();
 
-fn custom_format(w: &mut dyn Write, now: &mut DeferredNow, record: &Record) -> std::io::Result<()> {
-    write!(
-        w,
-        "{} [{}] {}",
-        record.level(),
-        now.now().format("%Y-%m-%d %H:%M:%S%.3f"),
-        &record.args()
-    )
-}
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
 
-pub fn init() -> LoggerHandle {
-    Logger::try_with_str("info")
-        .unwrap()
-        .log_to_file(
-            flexi_logger::FileSpec::default()
-                .directory(".log/")
-                .suppress_timestamp()
-                .suffix("log"),
-        )
-        .rotate(
-            Criterion::Size(10 * 1024 * 1024),
-            Naming::Timestamps,
-            Cleanup::KeepLogFiles(10),
-        )
-        .format(custom_format)
-        .print_message()
-        .create_symlink("current_log")
-        .write_mode(WriteMode::Async)
-        .duplicate_to_stderr(flexi_logger::Duplicate::All)
-        .start()
-        .unwrap()
+    // File appender for JSON logs
+    let json_appender = RollingFileAppender::builder()
+        .rotation(Rotation::DAILY)
+        .filename_prefix("dodgetracker-log-json")
+        .filename_suffix("log")
+        .max_log_files(3)
+        .build(".log/json/")
+        .unwrap();
+
+    let (json_non_blocking, _json_guard) = tracing_appender::non_blocking(json_appender);
+
+    // Layer for formatted logs
+    let fmt_layer = fmt::layer()
+        .with_target(false)
+        .with_writer(non_blocking)
+        .with_filter(LevelFilter::INFO);
+
+    // Layer for JSON logs
+    let json_layer = fmt::layer()
+        .json()
+        .with_target(false)
+        .with_writer(json_non_blocking)
+        .with_filter(LevelFilter::INFO);
+
+    // Combine the layers
+    tracing_subscriber::registry()
+        .with(fmt_layer)
+        .with(json_layer)
+        .init();
+
+    return (_guard, _json_guard);
 }
