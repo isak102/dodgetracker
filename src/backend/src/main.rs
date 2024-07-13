@@ -208,7 +208,8 @@ async fn run() -> Result<()> {
 async fn main() {
     let file_appender = tracing_appender::rolling::RollingFileAppender::builder()
         .rotation(Rotation::DAILY)
-        .filename_suffix("dodgetracker.log")
+        .filename_prefix("dodgetracker-log")
+        .filename_suffix("log")
         .max_log_files(3)
         .build(".log/")
         .unwrap();
