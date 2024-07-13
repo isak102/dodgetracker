@@ -46,5 +46,5 @@ pub fn init() -> (WorkerGuard, WorkerGuard) {
         .with(json_layer)
         .init();
 
-    return (_guard, _json_guard);
+    (_guard, _json_guard)
 }

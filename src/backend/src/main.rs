@@ -12,14 +12,7 @@ use tokio::spawn;
 use tokio::time::sleep;
 use tokio::time::Duration;
 use tracing::instrument;
-use tracing::level_filters::LevelFilter;
 use tracing::{error, info};
-use tracing_appender::rolling::RollingFileAppender;
-use tracing_appender::rolling::Rotation;
-use tracing_subscriber::fmt;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::Layer;
 
 mod apex_tier_players;
 mod config;
