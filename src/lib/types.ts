@@ -18,15 +18,19 @@ export const LeaderboardSearchParamsSchema = z.object({
 });
 
 export const dodgeSchema = z.object({
-  dodgeId: z.bigint(),
+  dodgeId: z.coerce.bigint(),
   gameName: z.string(),
   tagLine: z.string(),
-  lolProsSlug: z.string().nullable(),
+  lolProsSlug: z.union([z.string(), z.undefined()]).transform((value) => {
+    if (value === undefined) return null;
+    return value;
+    // return value === undefined ?? null : value
+  }),
   profileIconId: z.number(),
   riotRegion: z.string(),
   rankTier: z.enum(["CHALLENGER", "GRANDMASTER", "MASTER"]),
   lp: z.number(),
   lpLost: z.number(),
-  time: z.date(),
+  time: z.string().datetime({ offset: true }).pipe(z.coerce.date()),
 });
 export type Dodge = z.infer<typeof dodgeSchema>;

@@ -3,12 +3,12 @@
     "target": "es6",
     "module": "commonjs",
     "outDir": "../../dist/websockets",
-    "rootDir": ".",
+    "rootDir": "../", // Adjust the path according to your project structure
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["**/*", "../lib/*"],
+  "include": ["../lib/**/*", "../websockets/**/*"],
   "exclude": ["node_modules"]
 }
