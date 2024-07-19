@@ -1,17 +1,8 @@
-import { autoFetchInterval } from "@/src/autoFetch";
-import AutoFetchSwitch from "@/src/components/AutoFetchSwitch";
-import DodgeList from "@/src/components/DodgeList";
-import FetchButton from "@/src/components/FetchButton";
+import DodgeListWebSocket from "@/src/components/DodgeListWebSocket";
 import LoadingSpinner from "@/src/components/LoadingSpinner";
 import PlayerCountAlert from "@/src/components/PlayerCountAlert";
 import RegionPlayerCount from "@/src/components/RegionPlayerCount";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/src/components/ui/popover";
 import { supportedUserRegions } from "@/src/regions";
-import { HelpCircleIcon } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
@@ -52,31 +43,7 @@ export default async function Region({ params, searchParams }: Props) {
             <header className="m-2 text-center text-2xl font-bold md:text-4xl">
               Dodges
             </header>
-            <FetchButton className="mr-2" />
-            <Popover>
-              <PopoverTrigger>
-                <HelpCircleIcon className="md:size-6" />
-              </PopoverTrigger>
-              <PopoverContent className="w-60 border-zinc-700 bg-zinc-800 sm:w-96">
-                <div className="space-y-4">
-                  <p className="font-semibold">
-                    Dodges are automatically detected 24/7, every 5-10 seconds.
-                  </p>
-                  <ul className="list-inside list-disc space-y-2 font-light">
-                    <li>
-                      Press the <span className="font-semibold">Fetch</span>{" "}
-                      button to manually get the latest dodges from the server.
-                    </li>
-                    <li>
-                      Enable auto-fetch to receive updates automatically every{" "}
-                      {autoFetchInterval} seconds.
-                    </li>
-                  </ul>
-                </div>
-              </PopoverContent>
-            </Popover>
           </div>
-          <AutoFetchSwitch />
           <Suspense key={suspenseKey}>
             <PlayerCountAlert userRegion={params.region} />
           </Suspense>
@@ -102,10 +69,7 @@ export default async function Region({ params, searchParams }: Props) {
               </div>
             }
           >
-            <DodgeList
-              pageNumber={pageNumber}
-              userRegion={params.region}
-            ></DodgeList>
+            <DodgeListWebSocket userRegion={params.region}></DodgeListWebSocket>
           </ErrorBoundary>
         </div>
       </Suspense>

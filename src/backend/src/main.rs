@@ -39,11 +39,11 @@ const SUPPORTED_REGIONS: [PlatformRoute; 5] = [
 lazy_static! {
     static ref THROTTLES: HashMap<PlatformRoute, Duration> = {
         let mut m = HashMap::new();
-        m.insert(PlatformRoute::EUW1, Duration::from_millis(1300));
-        m.insert(PlatformRoute::EUN1, Duration::from_millis(1300));
-        m.insert(PlatformRoute::NA1, Duration::from_millis(1300));
-        m.insert(PlatformRoute::KR, Duration::from_millis(1300));
-        m.insert(PlatformRoute::OC1, Duration::from_millis(1300));
+        m.insert(PlatformRoute::EUW1, Duration::from_millis(7000));
+        m.insert(PlatformRoute::EUN1, Duration::from_millis(7000));
+        m.insert(PlatformRoute::NA1, Duration::from_millis(7000));
+        m.insert(PlatformRoute::KR, Duration::from_millis(7000));
+        m.insert(PlatformRoute::OC1, Duration::from_millis(7000));
         m
     };
 }
