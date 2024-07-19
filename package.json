@@ -6,6 +6,7 @@
     "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
+    "start:websockets": "ts-node --project src/websockets/tsconfig.json src/websockets/server.ts",
     "lint": "next lint"
   },
   "dependencies": {
@@ -49,6 +50,7 @@
     "twisted": "^1.57.0",
     "winston": "^3.11.0",
     "winston-daily-rotate-file": "^5.0.0",
+    "ws": "^8.18.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -60,6 +62,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/winston": "^2.4.4",
+    "@types/ws": "^8.5.11",
     "@typescript-eslint/eslint-plugin": "^7.11.0",
     "@typescript-eslint/parser": "^7.11.0",
     "autoprefixer": "^10.0.1",
@@ -73,6 +76,6 @@
     "tailwind-scrollbar": "^3.1.0",
     "tailwindcss": "^3.3.0",
     "ts-node": "^10.9.2",
-    "typescript": "5.3.3"
+    "typescript": "^5.3.3"
   }
 }

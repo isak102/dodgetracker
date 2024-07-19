@@ -1,8 +1,8 @@
 import Leaderboard from "@/src/components/Leaderboard";
 import LeaderboardFilters from "@/src/components/LeaderboardFilters";
 import LoadingSpinner from "@/src/components/LoadingSpinner";
+import { LeaderboardSearchParamsSchema } from "@/src/lib/types";
 import { supportedUserRegions } from "@/src/regions";
-import { LeaderboardSearchParamsSchema } from "@/src/types";
 import { type Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";

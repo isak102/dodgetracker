@@ -8,10 +8,10 @@ import {
   TabsTrigger,
 } from "@/src/components/ui/tabs";
 import { getSummoner } from "@/src/data";
+import { type Tier } from "@/src/lib/types";
 import { decodeRiotIdURIComponent } from "@/src/lib/utils";
 import { supportedUserRegions, userRegionToRiotRegion } from "@/src/regions";
 import { StatSite } from "@/src/statSites";
-import { type Tier } from "@/src/types";
 import { type Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";

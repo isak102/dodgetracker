@@ -12,8 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+import { LeaderboardSearchParamsSchema } from "../lib/types";
 import { seasons } from "../seasons";
-import { LeaderboardSearchParamsSchema } from "../types";
 
 export default function LeaderboardFilters() {
   const [_, startTransition] = useTransition();

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getCurrentSeason, seasons } from "./seasons";
+import { getCurrentSeason, seasons } from "../seasons";
 
 export enum Tier {
   MASTER = "MASTER",
@@ -16,3 +16,17 @@ export const LeaderboardSearchParamsSchema = z.object({
     .default(currentSeason)
     .catch(currentSeason),
 });
+
+export const dodgeSchema = z.object({
+  dodgeId: z.bigint(),
+  gameName: z.string(),
+  tagLine: z.string(),
+  lolProsSlug: z.string().nullable(),
+  profileIconId: z.number(),
+  riotRegion: z.string(),
+  rankTier: z.enum(["CHALLENGER", "GRANDMASTER", "MASTER"]),
+  lp: z.number(),
+  lpLost: z.number(),
+  time: z.date(),
+});
+export type Dodge = z.infer<typeof dodgeSchema>;

@@ -8,15 +8,15 @@ import {
 import "dotenv/config";
 import { and, asc, desc, eq, gt, lt, sql } from "drizzle-orm";
 import { db } from "./db";
+import type { Dodge, Tier } from "./lib/types"; // Assuming Dodge is properly defined to match the query results
 import { userRegionToRiotRegion } from "./regions";
 import { seasons } from "./seasons";
-import type { Tier } from "./types"; // Assuming Dodge is properly defined to match the query results
 
 export async function getDodges(
   riotRegion: string,
   pageSize: number,
   page: number,
-) {
+): Promise<Dodge[]> {
   return await db
     .select({
       dodgeId: dodges.dodgeId,
@@ -50,7 +50,7 @@ export async function getDodgesByPlayer(
   tagLine: string,
   pageSize: number,
   page: number,
-) {
+): Promise<Dodge[]> {
   console.log(gameName, tagLine, pageSize, page);
   return await db
     .select({

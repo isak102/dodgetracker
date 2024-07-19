@@ -3,8 +3,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/src/components/ui/popover";
+import { type Tier } from "@/src/lib/types";
 import { getRankEmblem, isWithinDays, profileIconUrl } from "@/src/lib/utils";
-import { type Tier } from "@/src/types";
 import { InfoIcon } from "lucide-react";
 import Image from "next/image";
 
