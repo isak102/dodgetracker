@@ -21,11 +21,12 @@ export const dodgeSchema = z.object({
   dodgeId: z.coerce.bigint(),
   gameName: z.string(),
   tagLine: z.string(),
-  lolProsSlug: z.union([z.string(), z.undefined()]).transform((value) => {
-    if (value === undefined) return null;
-    return value;
-    // return value === undefined ?? null : value
-  }),
+  lolProsSlug: z
+    .union([z.string(), z.undefined(), z.null()])
+    .transform((value) => {
+      if (value === undefined) return null;
+      return value;
+    }),
   profileIconId: z.number(),
   riotRegion: z.string(),
   rankTier: z.enum(["CHALLENGER", "GRANDMASTER", "MASTER"]),

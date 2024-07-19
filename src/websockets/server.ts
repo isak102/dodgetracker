@@ -1,14 +1,41 @@
 import "dotenv/config";
 import { Client } from "pg";
+import { URL } from "url";
 import WebSocket from "ws";
+import { z } from "zod";
 import { dodgeSchema, type Dodge } from "../lib/types";
 
 const port = 8080;
 const wss = new WebSocket.Server({ port });
 
+const queryParamSchema = z.object({
+  region: z.enum(["EUW1", "EUN1", "NA1", "KR", "OC1"]),
+});
+
+type WebSocketWithRegion = WebSocket & { region: string };
+
 const pgClient = new Client({
   connectionString: process.env.DATABASE_URL,
 });
+
+function broadcastDodge(dodge: Dodge) {
+  console.log("Broadcasting dodge", dodge);
+  wss.clients.forEach((client) => {
+    const region = (client as WebSocketWithRegion).region;
+    if (region !== dodge.riotRegion) return;
+
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(
+        JSON.stringify(
+          dodge,
+          (_key, value) =>
+            typeof value === "bigint" ? value.toString() : value, // eslint-disable-line
+        ),
+      );
+    }
+  });
+}
+
 pgClient.connect().catch(console.error);
 pgClient
   .query("LISTEN dodge_insert")
@@ -34,25 +61,33 @@ pgClient.on("notification", (notification) => {
   }
 });
 
-function broadcastDodge(dodge: Dodge) {
-  console.log("Broadcasting dodge", dodge);
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(
-        JSON.stringify(
-          dodge,
-          (_key, value) =>
-            typeof value === "bigint" ? value.toString() : value, // eslint-disable-line
-        ),
-      );
-    }
-  });
-}
-
-wss.on("connection", (ws) => {
+wss.on("connection", (ws: WebSocketWithRegion, req) => {
   console.log(
     `${new Date().toISOString().slice(0, 19).replace("T", "-")}: Client connected`,
   );
+
+  const queryParams = Object.fromEntries(
+    new URL(
+      req.url ?? "/",
+      `http://${req.headers.host}`,
+    ).searchParams.entries(),
+  );
+  const queryParamResult = queryParamSchema.safeParse(queryParams);
+
+  if (!queryParamResult.success) {
+    console.error(queryParamResult.error);
+    ws.send(
+      JSON.stringify({
+        error: "Invalid region",
+        details: queryParamResult.error,
+      }),
+    );
+    ws.close();
+    return;
+  }
+
+  ws.region = queryParamResult.data.region;
+
   ws.on("close", () => {
     console.log("Client disconnected");
   });
