@@ -1,5 +1,6 @@
 "use client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import "json-bigint-patch";
 import Image from "next/image";
 import { useEffect, useMemo } from "react";
 import useWebSocket from "react-use-websocket";
