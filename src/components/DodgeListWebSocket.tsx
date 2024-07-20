@@ -1,7 +1,9 @@
 "use client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 import useWebSocket from "react-use-websocket";
+import { z } from "zod";
 import { dodgeSchema, type Dodge, type Tier } from "../lib/types";
 import { cn, profileIconUrl } from "../lib/utils";
 import { userRegionToRiotRegion } from "../regions";
@@ -15,18 +17,55 @@ type DodgeListWebSocketProps = {
   userRegion: string;
 };
 
-const websocketUrl = "ws://localhost:8080";
+const websocketUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL!;
+console.log(websocketUrl);
+
+const dodgeListSchema = z.object({
+  dodges: z.array(dodgeSchema),
+});
+
+async function fetchDodges(riotRegion: string) {
+  const response = await fetch(`/api/dodges?region=${riotRegion}`);
+  if (!response.ok)
+    throw new Error(`Fetch failed with status: ${response.status}.`);
+
+  const data = await response.json(); // eslint-disable-line
+  return dodgeListSchema.parse(data).dodges;
+}
 
 export default function DodgeListWebSocket(props: DodgeListWebSocketProps) {
   const riotRegion = userRegionToRiotRegion(props.userRegion);
-  const [dodges, setDodges] = useState<Dodge[]>([]); // Initialize state to store dodges
+  const queryKey = useMemo(() => ["dodges", riotRegion], [riotRegion]);
+
+  const queryClient = useQueryClient();
+
+  const { data: dodges } = useQuery({
+    queryKey,
+    queryFn: () => fetchDodges(riotRegion),
+    staleTime: Infinity,
+  });
+
+  function invalidateQuery() {
+    queryClient
+      .invalidateQueries({ queryKey, exact: true })
+      .catch(console.error);
+  }
+
   const { lastJsonMessage } = useWebSocket(
     `${websocketUrl}/?region=${riotRegion}`,
     {
-      onOpen: () => console.log("WebSocket connection opened"),
-      onClose: () => console.log("WebSocket connection closed"),
-      onError: (event) => console.error("WebSocket error", event),
-      shouldReconnect: (_) => true, // Reconnect on close
+      onOpen: () => {
+        console.log("WebSocket connection opened");
+        invalidateQuery();
+      },
+      onClose: () => {
+        console.log("WebSocket connection closed");
+        invalidateQuery();
+      },
+      onError: (event) => {
+        return console.error("WebSocket error", event);
+      },
+      shouldReconnect: (_) => true,
     },
   );
 
@@ -35,12 +74,19 @@ export default function DodgeListWebSocket(props: DodgeListWebSocketProps) {
     if (lastJsonMessage !== null) {
       try {
         const parsedData = dodgeSchema.parse(lastJsonMessage);
-        setDodges((prevDodges) => [parsedData, ...prevDodges]);
+
+        queryClient.setQueryData(queryKey, (oldData: Dodge[]) => {
+          return [parsedData, ...oldData];
+        });
       } catch (error) {
         console.error("Error parsing WebSocket message:", error);
       }
     }
-  }, [lastJsonMessage]);
+  }, [lastJsonMessage, queryClient, queryKey]);
+
+  if (!dodges) {
+    return <p>No dodges yet.</p>;
+  }
 
   return (
     <ul className="p-2">

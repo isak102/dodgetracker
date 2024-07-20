@@ -31,7 +31,7 @@ export const dodgeSchema = z.object({
   riotRegion: z.string(),
   rankTier: z.enum(["CHALLENGER", "GRANDMASTER", "MASTER"]),
   lp: z.number(),
-  lpLost: z.number(),
+  lpLost: z.coerce.number(),
   time: z.string().datetime({ offset: true }).pipe(z.coerce.date()),
 });
 export type Dodge = z.infer<typeof dodgeSchema>;
