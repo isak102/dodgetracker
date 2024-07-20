@@ -1,4 +1,8 @@
 /** @type {import('next').NextConfig} */
+BigInt.prototype["toJSON"] = function () {
+  return this.toString();
+};
+
 const nextConfig = {
   images: {
     remotePatterns: [
