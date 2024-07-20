@@ -8,6 +8,7 @@ import { dodgeSchema, type Dodge, type Tier } from "../lib/types";
 import { cn, profileIconUrl } from "../lib/utils";
 import { userRegionToRiotRegion } from "../regions";
 import { StatSite } from "../statSites";
+import LoadingSpinner from "./LoadingSpinner";
 import ProfileLink from "./ProfileLink";
 import RankInfo from "./RankInfo";
 import StatSiteButton from "./StatSiteButton";
@@ -39,7 +40,7 @@ export default function DodgeListWebSocket(props: DodgeListWebSocketProps) {
 
   const queryClient = useQueryClient();
 
-  const { data: dodges } = useQuery({
+  const { data: dodges, isFetching } = useQuery({
     queryKey,
     queryFn: () => fetchDodges(riotRegion),
     staleTime: Infinity,
@@ -84,10 +85,15 @@ export default function DodgeListWebSocket(props: DodgeListWebSocketProps) {
     }
   }, [lastJsonMessage, queryClient, queryKey]);
 
-  if (!dodges) {
-    return <p>No dodges yet.</p>;
+  if (!dodges && isFetching) {
+    return (
+      <div className="flex h-[75vh] items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
   }
 
+  if (!dodges) return;
   return (
     <ul className="p-2">
       {dodges.map((dodge, _) => (
