@@ -1,12 +1,24 @@
 import "dotenv/config";
+import fs from "fs";
+import https from "https";
 import { Client } from "pg";
 import { URL } from "url";
 import WebSocket from "ws";
 import { z } from "zod";
 import { dodgeSchema, type Dodge } from "../lib/types";
 
+const serverOptions = {
+  cert: fs.readFileSync(process.env.CERT_FILE!),
+  key: fs.readFileSync(process.env.KEY_FILE!),
+};
+
 const port = 8080;
-const wss = new WebSocket.Server({ port });
+
+// Create an HTTPS server
+const server = https.createServer(serverOptions);
+
+// Attach WebSocket server to the HTTPS server
+const wss = new WebSocket.Server({ server });
 
 const queryParamSchema = z.object({
   region: z.enum(["EUW1", "EUN1", "NA1", "KR", "OC1"]),
@@ -69,7 +81,7 @@ wss.on("connection", (ws: WebSocketWithRegion, req) => {
   const queryParams = Object.fromEntries(
     new URL(
       req.url ?? "/",
-      `http://${req.headers.host}`,
+      `https://${req.headers.host}`,
     ).searchParams.entries(),
   );
   const queryParamResult = queryParamSchema.safeParse(queryParams);
@@ -97,4 +109,6 @@ wss.on("connection", (ws: WebSocketWithRegion, req) => {
   });
 });
 
-console.log(`WebSocket server is listening on ws://localhost:${port}`);
+server.listen(port, () => {
+  console.log(`WebSocket server is listening on wss://localhost:${port}`);
+});
