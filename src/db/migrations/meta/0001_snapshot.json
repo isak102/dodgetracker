@@ -1,0 +1,779 @@
+{
+  "id": "8c89994c-c603-4452-9ab6-df081dbaf014",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "dodgetracker.apex_tier_players": {
+      "name": "apex_tier_players",
+      "schema": "dodgetracker",
+      "columns": {
+        "summoner_id": {
+          "name": "summoner_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "summoner_name": {
+          "name": "summoner_name",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "region": {
+          "name": "region",
+          "type": "varchar(5)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "current_lp": {
+          "name": "current_lp",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "wins": {
+          "name": "wins",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "losses": {
+          "name": "losses",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rank_tier": {
+          "name": "rank_tier",
+          "type": "rank_tier_enum",
+          "typeSchema": "dodgetracker",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "idx_18287_region": {
+          "name": "idx_18287_region",
+          "columns": [
+            {
+              "expression": "region",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_18287_summoner_id": {
+          "name": "idx_18287_summoner_id",
+          "columns": [
+            {
+              "expression": "summoner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "idx_18287_primary": {
+          "name": "idx_18287_primary",
+          "columns": [
+            "summoner_id",
+            "region"
+          ]
+        }
+      },
+      "uniqueConstraints": {}
+    },
+    "dodgetracker.demotions": {
+      "name": "demotions",
+      "schema": "dodgetracker",
+      "columns": {
+        "demotion_id": {
+          "name": "demotion_id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "summoner_id": {
+          "name": "summoner_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "region": {
+          "name": "region",
+          "type": "varchar(5)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "at_wins": {
+          "name": "at_wins",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "at_losses": {
+          "name": "at_losses",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "idx_18293_summoner_id_region": {
+          "name": "idx_18293_summoner_id_region",
+          "columns": [
+            {
+              "expression": "summoner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "region",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "dodgetracker.dodges": {
+      "name": "dodges",
+      "schema": "dodgetracker",
+      "columns": {
+        "dodge_id": {
+          "name": "dodge_id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "summoner_id": {
+          "name": "summoner_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "region": {
+          "name": "region",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lp_before": {
+          "name": "lp_before",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lp_after": {
+          "name": "lp_after",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "at_wins": {
+          "name": "at_wins",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "at_losses": {
+          "name": "at_losses",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rank_tier": {
+          "name": "rank_tier",
+          "type": "rank_tier_enum",
+          "typeSchema": "dodgetracker",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "idx_18299_created_at": {
+          "name": "idx_18299_created_at",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_18299_region_created_at_dodge_id": {
+          "name": "idx_18299_region_created_at_dodge_id",
+          "columns": [
+            {
+              "expression": "region",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "dodge_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_18299_summoner_id": {
+          "name": "idx_18299_summoner_id",
+          "columns": [
+            {
+              "expression": "summoner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "region",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_18299_summoner_id_region_created_at": {
+          "name": "idx_18299_summoner_id_region_created_at",
+          "columns": [
+            {
+              "expression": "summoner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "region",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "dodgetracker.latest_updates": {
+      "name": "latest_updates",
+      "schema": "dodgetracker",
+      "columns": {
+        "region": {
+          "name": "region",
+          "type": "varchar(5)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "update_time": {
+          "name": "update_time",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "dodgetracker.player_counts": {
+      "name": "player_counts",
+      "schema": "dodgetracker",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "region": {
+          "name": "region",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "player_count": {
+          "name": "player_count",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "at_time": {
+          "name": "at_time",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "rank_tier": {
+          "name": "rank_tier",
+          "type": "rank_tier_enum",
+          "typeSchema": "dodgetracker",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "dodgetracker.promotions": {
+      "name": "promotions",
+      "schema": "dodgetracker",
+      "columns": {
+        "promotion_id": {
+          "name": "promotion_id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "summoner_id": {
+          "name": "summoner_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "region": {
+          "name": "region",
+          "type": "varchar(5)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "at_wins": {
+          "name": "at_wins",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "at_losses": {
+          "name": "at_losses",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "idx_18311_summoner_id_region": {
+          "name": "idx_18311_summoner_id_region",
+          "columns": [
+            {
+              "expression": "summoner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "region",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "dodgetracker.riot_ids": {
+      "name": "riot_ids",
+      "schema": "dodgetracker",
+      "columns": {
+        "puuid": {
+          "name": "puuid",
+          "type": "varchar(255)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "game_name": {
+          "name": "game_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "tag_line": {
+          "name": "tag_line",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "lolpros_slug": {
+          "name": "lolpros_slug",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lower_game_name": {
+          "name": "lower_game_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lower_tag_line": {
+          "name": "lower_tag_line",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_18316_puuid_game_name_tag_line": {
+          "name": "idx_18316_puuid_game_name_tag_line",
+          "columns": [
+            {
+              "expression": "puuid",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "game_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "tag_line",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "lower_game_name_tag_line": {
+          "name": "lower_game_name_tag_line",
+          "columns": [
+            {
+              "expression": "lower_game_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower_tag_line",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "dodgetracker.summoners": {
+      "name": "summoners",
+      "schema": "dodgetracker",
+      "columns": {
+        "summoner_id": {
+          "name": "summoner_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "region": {
+          "name": "region",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "profile_icon_id": {
+          "name": "profile_icon_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "puuid": {
+          "name": "puuid",
+          "type": "varchar(255)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "summoner_level": {
+          "name": "summoner_level",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_18325_puuid": {
+          "name": "idx_18325_puuid",
+          "columns": [
+            {
+              "expression": "puuid",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_18325_puuid_summoner_id_region": {
+          "name": "idx_18325_puuid_summoner_id_region",
+          "columns": [
+            {
+              "expression": "puuid",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "summoner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "region",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_18325_region": {
+          "name": "idx_18325_region",
+          "columns": [
+            {
+              "expression": "region",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_18325_summoner_id": {
+          "name": "idx_18325_summoner_id",
+          "columns": [
+            {
+              "expression": "summoner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_18325_summoner_id_region": {
+          "name": "idx_18325_summoner_id_region",
+          "columns": [
+            {
+              "expression": "summoner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "region",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    }
+  },
+  "enums": {
+    "dodgetracker.rank_tier_enum": {
+      "name": "rank_tier_enum",
+      "schema": "dodgetracker",
+      "values": [
+        "CHALLENGER",
+        "GRANDMASTER",
+        "MASTER"
+      ]
+    }
+  },
+  "schemas": {
+    "dodgetracker": "dodgetracker"
+  },
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

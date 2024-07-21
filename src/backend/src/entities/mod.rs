@@ -5,6 +5,7 @@ pub mod prelude;
 pub mod apex_tier_players;
 pub mod demotions;
 pub mod dodges;
+pub mod latest_updates;
 pub mod player_counts;
 pub mod promotions;
 pub mod riot_ids;

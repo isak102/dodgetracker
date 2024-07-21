@@ -230,3 +230,10 @@ export const apexTierPlayers = dodgetracker.table(
     };
   },
 );
+
+export const latestUpdates = dodgetracker.table("latest_updates", {
+  region: varchar("region", { length: 5 }).primaryKey().notNull(),
+  updateTime: timestamp("update_time", { withTimezone: true, mode: "date" })
+    .defaultNow()
+    .notNull(),
+});
