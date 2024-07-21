@@ -109,6 +109,4 @@ wss.on("connection", (ws: WebSocketWithRegion, req) => {
   });
 });
 
-server.listen(port, () => {
-  console.log(`WebSocket server is listening on wss://localhost:${port}`);
-});
+console.log(`WebSocket server is listening on wss://localhost:${port}`);
