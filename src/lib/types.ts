@@ -35,3 +35,9 @@ export const dodgeSchema = z.object({
   time: z.string().datetime({ offset: true }).pipe(z.coerce.date()),
 });
 export type Dodge = z.infer<typeof dodgeSchema>;
+
+export const regionUpdateScema = z.object({
+  region: z.string(),
+  update_time: z.string().datetime({ offset: true }).pipe(z.coerce.date()),
+});
+export type RegionUpdate = z.infer<typeof regionUpdateScema>;

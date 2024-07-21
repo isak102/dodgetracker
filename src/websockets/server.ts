@@ -5,7 +5,12 @@ import { Client } from "pg";
 import { URL } from "url";
 import WebSocket, { WebSocketServer } from "ws";
 import { z } from "zod";
-import { dodgeSchema, type Dodge } from "../lib/types";
+import {
+  RegionUpdate,
+  dodgeSchema,
+  regionUpdateScema,
+  type Dodge,
+} from "../lib/types";
 
 type WebSocketWithRegion = WebSocket & { region: string };
 
@@ -28,7 +33,7 @@ const pgClient = new Client({
 });
 
 function broadcastDodge(dodge: Dodge) {
-  console.log("Broadcasting dodge", dodge);
+  console.log("Broadcasting dodge: ", dodge);
   wss.clients.forEach((client) => {
     const region = (client as WebSocketWithRegion).region;
     if (region !== dodge.riotRegion) return;
@@ -36,7 +41,7 @@ function broadcastDodge(dodge: Dodge) {
     if (client.readyState === WebSocket.OPEN) {
       client.send(
         JSON.stringify(
-          dodge,
+          { type: "dodge", data: dodge },
           (_key, value) =>
             typeof value === "bigint" ? value.toString() : value, // eslint-disable-line
         ),
@@ -45,11 +50,31 @@ function broadcastDodge(dodge: Dodge) {
   });
 }
 
+function broadcastRegionUpdate(regionUpdate: RegionUpdate) {
+  console.log("Broadcasting region update: ", regionUpdate);
+  wss.clients.forEach((client) => {
+    if ((client as WebSocketWithRegion).region === regionUpdate.region) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(
+          JSON.stringify({ type: "region_update", data: regionUpdate }),
+        );
+      }
+    }
+  });
+}
+
 pgClient.connect().catch(console.error);
+
 pgClient
   .query("LISTEN dodge_insert")
   .then(() => {
     console.log("Listening for dodge_insert events");
+  })
+  .catch(console.error);
+pgClient
+  .query("LISTEN region_update")
+  .then(() => {
+    console.log("Listening for region_update events");
   })
   .catch(console.error);
 
@@ -66,6 +91,19 @@ pgClient.on("notification", (notification) => {
       }
 
       broadcastDodge(parseResult.data);
+    }
+  } else if (notification.channel === "region_update") {
+    if (notification.payload) {
+      const parseResult = regionUpdateScema.safeParse(
+        JSON.parse(notification.payload),
+      );
+
+      if (!parseResult.success) {
+        console.error(parseResult.error);
+        return;
+      }
+
+      broadcastRegionUpdate(parseResult.data);
     }
   }
 });

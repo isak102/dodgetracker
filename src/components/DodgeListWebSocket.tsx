@@ -4,7 +4,12 @@ import Image from "next/image";
 import { useEffect, useMemo } from "react";
 import useWebSocket from "react-use-websocket";
 import { z } from "zod";
-import { dodgeSchema, type Dodge, type Tier } from "../lib/types";
+import {
+  dodgeSchema,
+  regionUpdateScema,
+  type Dodge,
+  type Tier,
+} from "../lib/types";
 import { cn, profileIconUrl } from "../lib/utils";
 import { userRegionToRiotRegion } from "../regions";
 import { StatSite } from "../statSites";
@@ -30,7 +35,19 @@ type DodgeListWebSocketProps = {
 };
 
 const websocketUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL!;
-console.log(websocketUrl);
+
+const dodgeMessageSchema = z.object({
+  type: z.literal("dodge"),
+  data: dodgeSchema,
+});
+const regionUpdateMessage = z.object({
+  type: z.literal("region_update"),
+  data: regionUpdateScema,
+});
+const websocketMessageSchema = z.union([
+  regionUpdateMessage,
+  dodgeMessageSchema,
+]);
 
 const dodgeListSchema = z.object({
   dodges: z.array(dodgeSchema),
@@ -85,11 +102,20 @@ export default function DodgeListWebSocket(props: DodgeListWebSocketProps) {
   useEffect(() => {
     if (lastJsonMessage !== null) {
       try {
-        const parsedData = dodgeSchema.parse(lastJsonMessage);
+        const result = websocketMessageSchema.safeParse(lastJsonMessage);
+        if (!result.success) {
+          console.error("Error parsing WebSocket message:", result.error);
+          return;
+        }
+        const message = result.data;
 
-        queryClient.setQueryData(queryKey, (oldData: Dodge[]) => {
-          return [parsedData, ...oldData];
-        });
+        if (message.type === "region_update") {
+          console.log("Received region update message:", message.data);
+        } else if (message.type === "dodge") {
+          queryClient.setQueryData(queryKey, (oldData: Dodge[]) => {
+            return [message.data, ...oldData];
+          });
+        }
       } catch (error) {
         console.error("Error parsing WebSocket message:", error);
       }
