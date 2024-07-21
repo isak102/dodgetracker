@@ -106,7 +106,6 @@ wss.on("connection", (ws: WebSocketWithRegion, req) => {
   });
 });
 
-// Start the HTTPS server
 server.listen(port, () => {
   console.log(`Server started on port ${port}`);
 });
