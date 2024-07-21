@@ -19,6 +19,7 @@ mod config;
 mod db;
 mod dodges;
 mod entities;
+mod latest_updates;
 mod logger;
 mod lolpros;
 mod player_counts;
@@ -181,6 +182,9 @@ async fn run_region(region: PlatformRoute) {
             metric = "region_update",
             "Region update complete.",
         );
+        if let Err(error) = latest_updates::set_latest_update(region, db).await {
+            error!(?error, "Error setting latest update time. Ignoring.");
+        }
 
         if let Some(sleep_duration) = THROTTLES[&region].checked_sub(t2.elapsed()) {
             sleep_thread(sleep_duration).await;
