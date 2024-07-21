@@ -3,7 +3,7 @@ import fs from "fs";
 import https from "https";
 import { Client } from "pg";
 import { URL } from "url";
-import WebSocket from "ws";
+import WebSocket, { WebSocketServer } from "ws";
 import { z } from "zod";
 import { dodgeSchema, type Dodge } from "../lib/types";
 
@@ -18,7 +18,7 @@ const port = 8080;
 const server = https.createServer(serverOptions);
 
 // Attach WebSocket server to the HTTPS server
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocketServer({ server });
 
 const queryParamSchema = z.object({
   region: z.enum(["EUW1", "EUN1", "NA1", "KR", "OC1"]),
@@ -109,4 +109,23 @@ wss.on("connection", (ws: WebSocketWithRegion, req) => {
   });
 });
 
-console.log(`WebSocket server is listening on wss://localhost:${port}`);
+// Start the HTTPS server
+server.listen(port, () => {
+  console.log(`WebSocket server is listening on wss://localhost:${port}`);
+
+  // Create a WebSocket client and connect to the server
+  const ws = new WebSocket(`wss://localhost:${port}`, {
+    rejectUnauthorized: false,
+  });
+
+  ws.on("error", console.error);
+
+  ws.on("open", function open() {
+    console.log("WebSocket client connected");
+    ws.send("All glory to WebSockets!");
+  });
+
+  ws.on("message", function message(msg) {
+    console.log("Received from server:", msg);
+  });
+});
