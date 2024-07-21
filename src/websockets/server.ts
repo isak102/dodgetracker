@@ -7,6 +7,8 @@ import WebSocket, { WebSocketServer } from "ws";
 import { z } from "zod";
 import { dodgeSchema, type Dodge } from "../lib/types";
 
+type WebSocketWithRegion = WebSocket & { region: string };
+
 const serverOptions = {
   cert: fs.readFileSync(process.env.CERT_FILE!),
   key: fs.readFileSync(process.env.KEY_FILE!),
@@ -14,17 +16,12 @@ const serverOptions = {
 
 const port = 8080;
 
-// Create an HTTPS server
 const server = https.createServer(serverOptions);
-
-// Attach WebSocket server to the HTTPS server
 const wss = new WebSocketServer({ server });
 
 const queryParamSchema = z.object({
   region: z.enum(["EUW1", "EUN1", "NA1", "KR", "OC1"]),
 });
-
-type WebSocketWithRegion = WebSocket & { region: string };
 
 const pgClient = new Client({
   connectionString: process.env.DATABASE_URL,
@@ -111,21 +108,5 @@ wss.on("connection", (ws: WebSocketWithRegion, req) => {
 
 // Start the HTTPS server
 server.listen(port, () => {
-  console.log(`WebSocket server is listening on wss://localhost:${port}`);
-
-  // Create a WebSocket client and connect to the server
-  const ws = new WebSocket(`wss://localhost:${port}`, {
-    rejectUnauthorized: false,
-  });
-
-  ws.on("error", console.error);
-
-  ws.on("open", function open() {
-    console.log("WebSocket client connected");
-    ws.send("All glory to WebSockets!");
-  });
-
-  ws.on("message", function message(msg) {
-    console.log("Received from server:", msg);
-  });
+  console.log(`Server started on port ${port}`);
 });
