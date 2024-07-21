@@ -1,6 +1,5 @@
 "use client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import "json-bigint-patch";
 import Image from "next/image";
 import { useEffect, useMemo } from "react";
 import useWebSocket from "react-use-websocket";
@@ -14,6 +13,17 @@ import ProfileLink from "./ProfileLink";
 import RankInfo from "./RankInfo";
 import StatSiteButton from "./StatSiteButton";
 import TimeString from "./TimeString";
+
+/* eslint-disable */
+interface BigInt {
+  /** Convert to BigInt to string form in JSON.stringify */
+  toJSON: () => string;
+}
+// @ts-ignore
+BigInt.prototype.toJSON = function () {
+  return this.toString();
+};
+/* eslint-enable */
 
 type DodgeListWebSocketProps = {
   userRegion: string;
