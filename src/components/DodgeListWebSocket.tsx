@@ -4,12 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo } from "react";
 import useWebSocket from "react-use-websocket";
 import { z } from "zod";
-import {
-  dodgeSchema,
-  regionUpdateScema,
-  type Dodge,
-  type Tier,
-} from "../lib/types";
+import { Dodge, dodgeSchema, regionUpdateScema, type Tier } from "../lib/types";
 import { cn, profileIconUrl } from "../lib/utils";
 import { userRegionToRiotRegion } from "../regions";
 import { StatSite } from "../statSites";
@@ -44,7 +39,7 @@ const regionUpdateMessage = z.object({
   type: z.literal("region_update"),
   data: regionUpdateScema,
 });
-const websocketMessageSchema = z.union([
+const websocketMessageSchema = z.discriminatedUnion("type", [
   regionUpdateMessage,
   dodgeMessageSchema,
 ]);
@@ -102,6 +97,7 @@ export default function DodgeListWebSocket(props: DodgeListWebSocketProps) {
   useEffect(() => {
     if (lastJsonMessage !== null) {
       try {
+        console.log("Received WebSocket message:", lastJsonMessage);
         const result = websocketMessageSchema.safeParse(lastJsonMessage);
         if (!result.success) {
           console.error("Error parsing WebSocket message:", result.error);

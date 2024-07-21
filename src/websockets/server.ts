@@ -6,10 +6,10 @@ import { URL } from "url";
 import WebSocket, { WebSocketServer } from "ws";
 import { z } from "zod";
 import {
-  RegionUpdate,
   dodgeSchema,
   regionUpdateScema,
   type Dodge,
+  type RegionUpdate,
 } from "../lib/types";
 
 type WebSocketWithRegion = WebSocket & { region: string };
@@ -61,6 +61,22 @@ function broadcastRegionUpdate(regionUpdate: RegionUpdate) {
       }
     }
   });
+}
+
+async function getLatestUpdateTime(region: string) {
+  const result = await pgClient.query<{
+    json_data: RegionUpdate;
+  }>(
+    `SELECT row_to_json(t) AS json_data
+     FROM (SELECT * FROM latest_updates WHERE region = $1) t`,
+    [region],
+  );
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  return result.rows[0].json_data;
 }
 
 pgClient.connect().catch(console.error);
@@ -134,6 +150,20 @@ wss.on("connection", (ws: WebSocketWithRegion, req) => {
   }
 
   ws.region = queryParamResult.data.region;
+
+  getLatestUpdateTime(ws.region)
+    .then((result) => {
+      if (result) {
+        console.log("Latest update time: ", result);
+        ws.send(
+          JSON.stringify({
+            type: "region_update",
+            data: result,
+          }),
+        );
+      }
+    })
+    .catch(console.error);
 
   ws.on("close", () => {
     console.log("Client disconnected");
