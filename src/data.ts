@@ -90,7 +90,7 @@ export async function getDodgesByPlayer(
     )
     .orderBy(desc(dodges.createdAt))
     .limit(pageSize)
-    .offset(pageSize * (page - 1));
+    .offset(pageSize * Math.max(page - 1, 0));
 }
 
 export async function getAllDodgesByPlayer(gameName: string, tagLine: string) {
