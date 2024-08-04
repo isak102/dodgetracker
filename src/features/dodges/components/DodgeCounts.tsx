@@ -13,15 +13,15 @@ export default async function DodgeCounts(props: DodgeCountsProps) {
   const data = [
     {
       period: "Last 30d",
-      dodges: dodgeCounts.last30Days,
+      dodges: Number(dodgeCounts.last30Days),
     },
     {
       period: "Last 7d",
-      dodges: dodgeCounts.last7Days,
+      dodges: Number(dodgeCounts.last7Days),
     },
     {
       period: "Last 24h",
-      dodges: dodgeCounts.last24Hours,
+      dodges: Number(dodgeCounts.last24Hours),
     },
   ];
 
