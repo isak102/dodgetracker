@@ -3,6 +3,7 @@ import { type getLeaderboard } from "@/src/data";
 import { type Tier } from "@/src/lib/types";
 import { cn } from "@/src/lib/utils";
 import { StatSite } from "@/src/statSites";
+import ProfileLink from "../../player/components/ProfileLink";
 import SmallProfileCard from "../../player/components/SmallProfileCard";
 import StatSiteButton from "../../player/components/StatSiteButton";
 
@@ -26,18 +27,23 @@ export default function LeaderboardEntry(props: {
         {(props.pageNumber - 1) * props.pageSize + props.index + 1}.
       </p>
       <section className="flex flex-wrap items-center md:text-xl">
-        <SmallProfileCard
-          showLolProsInfo={true}
-          lolProsSlug={props.entry.lolProsSlug}
-          lolProsName={props.entry.lolProsName}
-          lolProsCountry={props.entry.lolProsCountry}
-          lolProsPosition={props.entry.lolProsPosition}
-          gameName={props.entry.gameName}
-          tagLine={props.entry.tagLine}
-          profileIconId={props.entry.profileIconId}
-          userRegion={props.userRegion}
+        <ProfileLink
+          href={`/${props.userRegion}/${props.entry.gameName}-${props.entry.tagLine}`}
           profileLink={true}
-        />
+        >
+          <SmallProfileCard
+            showLolProsInfo={true}
+            lolProsSlug={props.entry.lolProsSlug}
+            lolProsName={props.entry.lolProsName}
+            lolProsCountry={props.entry.lolProsCountry}
+            lolProsPosition={props.entry.lolProsPosition}
+            gameName={props.entry.gameName}
+            tagLine={props.entry.tagLine}
+            profileIconId={props.entry.profileIconId}
+            userRegion={props.userRegion}
+            profileLink={true}
+          />
+        </ProfileLink>
         <div className="flex flex-wrap md:items-center md:justify-center">
           {props.entry.lolProsSlug && (
             <div className="mr-1">

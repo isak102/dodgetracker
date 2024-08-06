@@ -2,6 +2,7 @@ import RankInfo from "@/src/components/RankInfo";
 import TimeString from "@/src/components/TimeString";
 import { type Dodge, type Tier } from "@/src/lib/types";
 import { StatSite } from "@/src/statSites";
+import ProfileLink from "../../player/components/ProfileLink";
 import SmallProfileCard from "../../player/components/SmallProfileCard";
 import StatSiteButton from "../../player/components/StatSiteButton";
 import LpLostBadge from "./LpLostBadge";
@@ -17,19 +18,24 @@ export default function DodgeEntry(props: {
   return (
     <div className="grid grid-cols-[3fr,1.2fr,0.9fr,0.8fr] gap-1 md:grid-cols-[2fr,0.8fr,0.3fr,0.6fr] md:gap-2">
       <section className="flex flex-wrap items-center md:text-xl">
-        <SmallProfileCard
-          lolProsSlug={props.dodge.lolProsSlug}
-          lolProsName={props.dodge.lolProsName}
-          lolProsCountry={props.dodge.lolProsCountry}
-          lolProsPosition={props.dodge.lolProsPosition}
-          showLolProsInfo={props.showLolProsInfo}
-          gameName={props.dodge.gameName}
-          tagLine={props.dodge.tagLine}
-          profileIconId={props.dodge.profileIconId}
-          userRegion={props.userRegion}
+        <ProfileLink
+          href={`/${props.userRegion}/${props.dodge.gameName}-${props.dodge.tagLine}`}
           profileLink={props.profileLink}
-          scale
-        />
+        >
+          <SmallProfileCard
+            lolProsSlug={props.dodge.lolProsSlug}
+            lolProsName={props.dodge.lolProsName}
+            lolProsCountry={props.dodge.lolProsCountry}
+            lolProsPosition={props.dodge.lolProsPosition}
+            showLolProsInfo={props.showLolProsInfo}
+            gameName={props.dodge.gameName}
+            tagLine={props.dodge.tagLine}
+            profileIconId={props.dodge.profileIconId}
+            userRegion={props.userRegion}
+            profileLink={props.profileLink}
+            scale
+          />
+        </ProfileLink>
         {props.statSiteButtons && (
           <>
             {props.dodge.lolProsSlug && (
