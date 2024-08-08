@@ -46,6 +46,8 @@ export default function DodgeEntry(props: {
                   tagLine={props.dodge.tagLine}
                   statSite={StatSite.LOLPROS}
                   lolProsSlug={props.dodge.lolProsSlug}
+                  dodgeTime={props.dodge.time}
+                  clientServerTimeDiff={props.clientServerTimeDiff}
                 />
               </div>
             )}
@@ -55,6 +57,8 @@ export default function DodgeEntry(props: {
                 gameName={props.dodge.gameName}
                 tagLine={props.dodge.tagLine}
                 statSite={StatSite.OPGG}
+                dodgeTime={props.dodge.time}
+                clientServerTimeDiff={props.clientServerTimeDiff}
               />
             </div>
             <StatSiteButton
@@ -62,6 +66,8 @@ export default function DodgeEntry(props: {
               gameName={props.dodge.gameName}
               tagLine={props.dodge.tagLine}
               statSite={StatSite.DEEPLOL}
+              dodgeTime={props.dodge.time}
+              clientServerTimeDiff={props.clientServerTimeDiff}
             />
           </>
         )}

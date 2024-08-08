@@ -4,6 +4,7 @@ import posthog from "posthog-js";
 import { Button } from "../../../components/ui/button";
 import { cn } from "../../../lib/utils";
 import { StatSite, getDeeplolUrl, getOpggUrl } from "../../../statSites";
+import useDodgeTrackedEvent from "../hooks/useDodgeTrackedEvent";
 
 export interface StatSiteButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -12,12 +13,16 @@ export interface StatSiteButtonProps
   gameName: string;
   tagLine: string;
   lolProsSlug?: string; /// If the stat site is lolPros, then this is the slug
+  dodgeTime?: Date;
+  clientServerTimeDiff?: number;
 }
 
 export default function StatSiteButton({
   className,
   ...props
 }: StatSiteButtonProps) {
+  const dodgeTrackedEvent = useDodgeTrackedEvent();
+
   const url = (function () {
     switch (props.statSite) {
       case StatSite.OPGG:
@@ -37,6 +42,16 @@ export default function StatSiteButton({
       region: props.riotRegion,
       siteUrl: url,
     });
+
+    if (props.dodgeTime && props.clientServerTimeDiff) {
+      dodgeTrackedEvent(
+        props.gameName,
+        props.tagLine,
+        props.riotRegion,
+        props.dodgeTime,
+        props.clientServerTimeDiff,
+      );
+    }
   };
 
   return (
