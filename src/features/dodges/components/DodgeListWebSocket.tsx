@@ -125,7 +125,6 @@ export default function DodgeListWebSocket(props: DodgeListWebSocketProps) {
           });
         }
       } catch (error) {
-        posthog.capture("websocket_msg_parse_error", { error });
         console.error("Error parsing WebSocket message:", error);
       }
     }
