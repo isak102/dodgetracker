@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import posthog from "posthog-js";
-import useDodgeTrackedEvent from "../hooks/useDodgeTrackedEvent";
+import useDodgeTrackedEvent from "../../dodges/hooks/useDodgeTrackedEvent";
 
 export interface ProfileLinkProps extends React.HTMLAttributes<HTMLDivElement> {
   gameName: string;
