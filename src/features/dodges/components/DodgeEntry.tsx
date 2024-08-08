@@ -19,8 +19,13 @@ export default function DodgeEntry(props: {
     <div className="grid grid-cols-[3fr,1.2fr,0.9fr,0.8fr] gap-1 md:grid-cols-[2fr,0.8fr,0.3fr,0.6fr] md:gap-2">
       <section className="flex flex-wrap items-center md:text-xl">
         <ProfileLink
-          href={`/${props.userRegion}/${props.dodge.gameName}-${props.dodge.tagLine}`}
+          gameName={props.dodge.gameName}
+          tagLine={props.dodge.tagLine}
+          userRegion={props.userRegion}
+          riotRegion={props.dodge.riotRegion}
           profileLink={props.profileLink}
+          dodgeTime={props.dodge.time}
+          clientServerTimeDiff={props.clientServerTimeDiff}
         >
           <SmallProfileCard
             lolProsSlug={props.dodge.lolProsSlug}

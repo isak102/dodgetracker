@@ -28,8 +28,11 @@ export default function LeaderboardEntry(props: {
       </p>
       <section className="flex flex-wrap items-center md:text-xl">
         <ProfileLink
-          href={`/${props.userRegion}/${props.entry.gameName}-${props.entry.tagLine}`}
+          gameName={props.entry.gameName}
+          tagLine={props.entry.tagLine}
           profileLink={true}
+          userRegion={props.userRegion}
+          riotRegion={props.entry.riotRegion}
         >
           <SmallProfileCard
             showLolProsInfo={true}

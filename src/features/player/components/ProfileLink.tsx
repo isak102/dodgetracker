@@ -2,10 +2,16 @@
 
 import Link from "next/link";
 import posthog from "posthog-js";
+import useDodgeTrackedEvent from "../hooks/useDodgeTrackedEvent";
 
 export interface ProfileLinkProps extends React.HTMLAttributes<HTMLDivElement> {
-  href: string;
+  gameName: string;
+  tagLine: string;
+  userRegion: string;
+  riotRegion: string;
   profileLink: boolean;
+  dodgeTime?: Date;
+  clientServerTimeDiff?: number;
 }
 
 function captureEvent(eventName: string, href: string) {
@@ -13,12 +19,25 @@ function captureEvent(eventName: string, href: string) {
 }
 
 export default function ProfileLink(props: ProfileLinkProps) {
+  const dodgeTrackedEvent = useDodgeTrackedEvent();
+  const link = `/${props.userRegion}/${props.gameName}-${props.tagLine}`;
+
   return (
     <Link
       onClick={(_e) => {
-        captureEvent("profile_link_clicked", props.href);
+        captureEvent("profile_link_clicked", link);
+
+        if (props.dodgeTime && props.clientServerTimeDiff) {
+          dodgeTrackedEvent(
+            props.gameName,
+            props.tagLine,
+            props.riotRegion,
+            props.dodgeTime,
+            props.clientServerTimeDiff,
+          );
+        }
       }}
-      href={props.href}
+      href={link}
       style={{
         pointerEvents: props.profileLink ? "auto" : "none",
       }}
