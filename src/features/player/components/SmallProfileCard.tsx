@@ -43,7 +43,7 @@ export default function SmallProfileCard(props: {
           props.lolProsName &&
           props.lolProsCountry &&
           props.lolProsPosition && (
-            <section className="flex items-center gap-[2px] text-sm font-light">
+            <section className="flex flex-wrap items-center gap-[2px] text-sm font-light">
               <PlayerFlag countryCode={props.lolProsCountry} />
               <PositionIcon position={props.lolProsPosition} />
               <p>{props.lolProsName}</p>
