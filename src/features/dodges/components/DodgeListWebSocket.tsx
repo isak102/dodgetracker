@@ -1,6 +1,5 @@
 "use client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import posthog from "posthog-js";
 import { useEffect, useMemo, useState } from "react";
 import useWebSocket, { ReadyState } from "react-use-websocket";
 import { z } from "zod";
@@ -87,7 +86,6 @@ export default function DodgeListWebSocket(props: DodgeListWebSocketProps) {
         invalidateQuery();
       },
       onError: (event) => {
-        posthog.capture("websocket_error", { event });
         console.error("WebSocket error", event);
       },
       shouldReconnect: (_) => true,
