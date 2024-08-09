@@ -64,8 +64,8 @@ export default async function BigProfileCard(props: {
             </p>
             {hasLolProsInfo && (
               <section className="flex items-center gap-[2px] text-sm font-light">
-                <PlayerFlag countryCode={props.lolProsCountry!} height={28} />
-                <PositionIcon position={props.lolProsPosition!} size={23} />
+                <PlayerFlag countryCode={props.lolProsCountry!} />
+                <PositionIcon position={props.lolProsPosition!} />
                 <p>{props.lolProsName}</p>
               </section>
             )}

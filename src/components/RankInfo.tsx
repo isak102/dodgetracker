@@ -11,21 +11,19 @@ export default function RankInfo(props: {
     <>
       <section
         className={cn(
-          "flex flex-col items-center justify-center text-sm lg:flex-row lg:justify-start lg:text-base",
+          "flex flex-col items-center justify-center gap-1 text-sm lg:flex-row lg:justify-start lg:text-base",
           {
             "flex-row": props.disableCol,
           },
         )}
       >
-        <div className="relative mr-1 size-7 md:size-10">
-          <Image
-            src={getRankEmblem(props.rankTier)}
-            alt={props.rankTier}
-            fill
-            quality={100}
-            unoptimized
-          />
-        </div>
+        <Image
+          src={getRankEmblem(props.rankTier)}
+          alt={props.rankTier}
+          height={40}
+          width={40}
+          quality={100}
+        />
         <p className="text-nowrap">{props.lp} LP</p>
       </section>
     </>

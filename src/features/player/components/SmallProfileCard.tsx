@@ -27,16 +27,13 @@ export default function SmallProfileCard(props: {
         },
       )}
     >
-      <div className="relative size-10 self-center md:size-12">
-        <Image
-          alt="Profile Icon"
-          src={profileIconUrl(props.profileIconId)}
-          quality={100}
-          unoptimized
-          layout="fill"
-          style={{ objectFit: "contain" }}
-        ></Image>
-      </div>
+      <Image
+        alt="Profile Icon"
+        src={profileIconUrl(props.profileIconId)}
+        height={48}
+        width={48}
+        quality={100}
+      ></Image>
       <section className="flex flex-col">
         <div className="flex flex-wrap break-all font-semibold underline-offset-2 group-hover:underline">
           <p>{props.gameName}</p>
@@ -47,8 +44,8 @@ export default function SmallProfileCard(props: {
           props.lolProsCountry &&
           props.lolProsPosition && (
             <section className="flex items-center gap-[2px] text-sm font-light">
-              <PlayerFlag countryCode={props.lolProsCountry} height={28} />
-              <PositionIcon position={props.lolProsPosition} size={23} />
+              <PlayerFlag countryCode={props.lolProsCountry} />
+              <PositionIcon position={props.lolProsPosition} />
               <p>{props.lolProsName}</p>
             </section>
           )}
